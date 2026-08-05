@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comiket Circle Tracker Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-icon">⛩️</div>
+      <div>
+        <div class="header-title">Comiket Circle Tracker Settings</div>
+        <div class="header-sub">Configure display preferences and Google Sheet sync</div>
+      </div>
+    </div>
+
+    <!-- Section 1: Google Sheet Link -->
+    <div class="card">
+      <div class="card-title">
+        <span>📊</span> Master Google Sheet Link
+      </div>
+      <div style="font-size: 12.5px; color: #94a3b8;">
+        Paste your Google Sheet URL here to quickly open it anytime from the extension popup.
+      </div>
+
+      <div class="form-group">
+        <label class="label">Google Sheet URL</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="url" class="input-text" id="opt-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/1s-YYU43O4dypXbYI3q5X97IkHhtPxPunSJ1qQLiZrIE/edit">
+          <button class="btn btn-secondary" id="btn-open-sheet">📊 Open Sheet</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Display & Content Preferences -->
+    <div class="card">
+      <div class="card-title">
+        <span>🎨</span> Display & Content Preferences
+      </div>
+
+      <div class="form-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
+        <div>
+          <div style="font-weight: 700; color: #fff;">Include Tweet Content / Post Description</div>
+          <div style="font-size: 11px; color: #94a3b8;">Save full post text into tracked items & spreadsheet exports. Uncheck to keep spreadsheets compact (Enabled by default).</div>
+        </div>
+        <input type="checkbox" id="opt-include-desc" style="width: 20px; height: 20px; cursor: pointer;">
+      </div>
+
+      <div class="form-group" style="flex-direction: row; align-items: center; justify-content: space-between; margin-top: 10px;">
+        <div>
+          <div style="font-weight: 700; color: #fff;">Enable Sample Artwork Preview in Modals</div>
+          <div style="font-size: 11px; color: #94a3b8;">Show sample image thumbnail previews inside tracking popups (Disabled by default).</div>
+        </div>
+        <input type="checkbox" id="opt-show-img" style="width: 20px; height: 20px; cursor: pointer;">
+      </div>
+
+      <div class="form-group" style="margin-top: 10px;">
+        <label class="label">Default Priority Level</label>
+        <select class="select-input" id="opt-priority">
+          <option value="P1 (High)">P1 (High - Wall Circles & Major Authors)</option>
+          <option value="P2 (Medium)" selected>P2 (Medium - Island Circles)</option>
+          <option value="P3 (Low)">P3 (Low - Optional / Backup)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="label">Default Day Fallback</label>
+        <select class="select-input" id="opt-day">
+          <option value="Day 1">Day 1 (Saturday, August 15)</option>
+          <option value="Day 2">Day 2 (Sunday, August 16)</option>
+        </select>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary" id="btn-save">💾 Save Settings</button>
+      </div>
+
+      <div class="status-msg" id="status-msg"></div>
+    </div>
+
+    <!-- Section 3: Automatic Cloud Sync (Apps Script Web App) -->
+    <div class="card">
+      <div class="card-title">
+        <span>⚡</span> Optional Google Apps Script Web App Sync
+      </div>
+      <div style="font-size: 12.5px; color: #94a3b8;">
+        If you want instant automatic cloud appending without needing to copy/paste, deploy the Apps Script code from <code style="color: #f59e0b;">Code.gs</code> to your Sheet and paste the Web App URL below.
+      </div>
+
+      <div class="form-group">
+        <label class="label">Apps Script Web App URL (Optional)</label>
+        <input type="url" class="input-text" id="opt-url" placeholder="https://script.google.com/macros/s/.../exec">
+      </div>
+    </div>
+  </div>
+
+  <script src="../src/utils/browser-poly.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

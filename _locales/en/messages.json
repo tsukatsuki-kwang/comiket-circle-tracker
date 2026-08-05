@@ -1,0 +1,114 @@
+{
+  "extName": {
+    "message": "Comiket Circle Tracker Sync",
+    "description": "Extension Name"
+  },
+  "extDescription": {
+    "message": "Zero-setup circle parser and plan tracker for Comiket announcements on X (Twitter).",
+    "description": "Extension Description"
+  },
+  "tabQuickAdd": {
+    "message": "Quick Add",
+    "description": "Tab name"
+  },
+  "tabInspector": {
+    "message": "Page Inspector",
+    "description": "Tab name"
+  },
+  "tabSavedCircles": {
+    "message": "Saved Circles",
+    "description": "Tab name"
+  },
+  "lblPasteText": {
+    "message": "Paste Tweet / Announcement Text",
+    "description": "Textarea label"
+  },
+  "placeholderPasteText": {
+    "message": "Paste tweet or circle announcement text (e.g. C108 土曜 東モ-30a)...",
+    "description": "Textarea placeholder"
+  },
+  "btnSaveCircle": {
+    "message": "Save Circle to Plan",
+    "description": "Button text"
+  },
+  "lblDetectedCircles": {
+    "message": "Detected Circles on Active Page",
+    "description": "Page inspector label"
+  },
+  "lblDay1Targets": {
+    "message": "Day 1 Targets",
+    "description": "Stat label"
+  },
+  "lblDay2Targets": {
+    "message": "Day 2 Targets",
+    "description": "Stat label"
+  },
+  "lblTotalBudget": {
+    "message": "Total Est. Yen Cash Budget",
+    "description": "Budget label"
+  },
+  "btnExportCSV": {
+    "message": "Export CSV for Google Sheets",
+    "description": "Export button"
+  },
+  "btnCopyTSV": {
+    "message": "Copy Table for Google Sheets (Ctrl+V)",
+    "description": "Copy button"
+  },
+  "btnJSONBackup": {
+    "message": "JSON Backup",
+    "description": "Backup button"
+  },
+  "btnClearList": {
+    "message": "Clear List",
+    "description": "Clear button"
+  },
+  "btnSettings": {
+    "message": "Extension Settings",
+    "description": "Footer link"
+  },
+  "btnOpenMasterSheet": {
+    "message": "Open Master Sheet",
+    "description": "Footer link"
+  },
+  "lblBuilding": {
+    "message": "Building",
+    "description": "Building column"
+  },
+  "lblBlock": {
+    "message": "Block",
+    "description": "Block column"
+  },
+  "lblSpace": {
+    "message": "Space / Table",
+    "description": "Space column"
+  },
+  "lblCircleName": {
+    "message": "Circle Name",
+    "description": "Circle name"
+  },
+  "lblArtist": {
+    "message": "Artist / Author",
+    "description": "Artist name"
+  },
+  "lblEstPrice": {
+    "message": "Est. Price (JPY)",
+    "description": "Price"
+  },
+  "lblSampleImgUrl": {
+    "message": "Sample Image URL",
+    "description": "Image URL"
+  },
+  "lblTweetLink": {
+    "message": "Tweet Link / Status URL",
+    "description": "Tweet URL"
+  },
+  "lblFixupUrl": {
+    "message": "FixupX / CunnyX Share Link",
+    "description": "FixupX URL"
+  },
+  "lblPostDesc": {
+    "message": "Item Description & Post Text",
+    "description": "Post description"
+  }
+}

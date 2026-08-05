@@ -1,0 +1,114 @@
+{
+  "extName": {
+    "message": "コミケ サークル配置チェッカー & 同期",
+    "description": "Extension Name"
+  },
+  "extDescription": {
+    "message": "X（Twitter）のコミケ告知ポストから日程・館名・ブロック・スペース番地・サークル名・価格・サンプル画像を自動抽出して Google スプレッドシートやローカルに保存・同期します。",
+    "description": "Extension Description"
+  },
+  "tabQuickAdd": {
+    "message": "クイック追加",
+    "description": "Tab name"
+  },
+  "tabInspector": {
+    "message": "ページ解析",
+    "description": "Tab name"
+  },
+  "tabSavedCircles": {
+    "message": "保存済みサークル",
+    "description": "Tab name"
+  },
+  "lblPasteText": {
+    "message": "告知ポスト / テキスト貼り付け",
+    "description": "Textarea label"
+  },
+  "placeholderPasteText": {
+    "message": "告知ポストや配置情報を貼り付け (例: C108 土曜 東モ-30a @artist_handle)...",
+    "description": "Textarea placeholder"
+  },
+  "btnSaveCircle": {
+    "message": "計画シートに保存",
+    "description": "Button text"
+  },
+  "lblDetectedCircles": {
+    "message": "表示中ページで検出されたサークル",
+    "description": "Page inspector label"
+  },
+  "lblDay1Targets": {
+    "message": "1日目（土曜）目標数",
+    "description": "Stat label"
+  },
+  "lblDay2Targets": {
+    "message": "2日目（日曜）目標数",
+    "description": "Stat label"
+  },
+  "lblTotalBudget": {
+    "message": "合計想定購入予算 (日本円)",
+    "description": "Budget label"
+  },
+  "btnExportCSV": {
+    "message": "Google シート用 CSV 出力",
+    "description": "Export button"
+  },
+  "btnCopyTSV": {
+    "message": "Google シート用にコピー (Ctrl+V)",
+    "description": "Copy button"
+  },
+  "btnJSONBackup": {
+    "message": "JSON バックアップ",
+    "description": "Backup button"
+  },
+  "btnClearList": {
+    "message": "リスト全削除",
+    "description": "Clear button"
+  },
+  "btnSettings": {
+    "message": "拡張機能の設定",
+    "description": "Footer link"
+  },
+  "btnOpenMasterSheet": {
+    "message": "マスターシートを開く",
+    "description": "Footer link"
+  },
+  "lblBuilding": {
+    "message": "館名 (東/西/南)",
+    "description": "Building column"
+  },
+  "lblBlock": {
+    "message": "ブロック",
+    "description": "Block column"
+  },
+  "lblSpace": {
+    "message": "スペース (番地)",
+    "description": "Space column"
+  },
+  "lblCircleName": {
+    "message": "サークル名",
+    "description": "Circle name"
+  },
+  "lblArtist": {
+    "message": "執筆者 / 作者名",
+    "description": "Artist name"
+  },
+  "lblEstPrice": {
+    "message": "頒布価格 (円)",
+    "description": "Price"
+  },
+  "lblSampleImgUrl": {
+    "message": "サンプル画像 URL",
+    "description": "Image URL"
+  },
+  "lblTweetLink": {
+    "message": "ツイート / ポスト URL",
+    "description": "Tweet URL"
+  },
+  "lblFixupUrl": {
+    "message": "FixupX / CunnyX 共有リンク",
+    "description": "FixupX URL"
+  },
+  "lblPostDesc": {
+    "message": "お品書き・ポスト本文",
+    "description": "Post description"
+  }
+}

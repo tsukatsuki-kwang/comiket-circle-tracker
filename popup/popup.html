@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comiket Circle Tracker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="brand">
+        <div class="brand-icon">⛩️</div>
+        <div>
+          <div class="brand-title">Comiket Planner</div>
+          <div class="brand-sub">C108 Plan</div>
+        </div>
+      </div>
+      <div class="status-badge connected" id="status-badge">
+        <span class="status-dot"></span>
+        <span id="status-text">Local Storage Active</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="manual-tab" data-i18n="tabQuickAdd">Quick Add</button>
+      <button class="tab-btn" data-tab="page-tab" data-i18n="tabInspector">Page Inspector</button>
+      <button class="tab-btn" data-tab="stats-tab" data-i18n="tabSavedCircles">Saved Circles</button>
+    </div>
+
+    <!-- Tab 1: Manual Quick Add -->
+    <div class="tab-content active" id="manual-tab">
+      <div class="form-group">
+        <label class="label" data-i18n="lblPasteText">Paste Tweet / Announcement Text</label>
+        <textarea class="input-text" id="manual-text" placeholder="Paste tweet or circle announcement text (e.g. C108 土曜 東モ-30a)..."></textarea>
+      </div>
+
+      <div class="parsed-preview" id="parsed-preview" style="display: none;">
+        <div class="preview-tag">
+          <span>🎯</span>
+          <span id="preview-day-space">Day 1: 東 モ-30a</span>
+        </div>
+        <div class="preview-detail" id="preview-details">Circle: Unknown | Est Price: TBD</div>
+      </div>
+
+      <button class="btn-primary" id="btn-manual-sync" disabled>
+        <span>💾</span> <span data-i18n="btnSaveCircle">Save Circle to Plan</span>
+      </button>
+    </div>
+
+    <!-- Tab 2: Page Inspector -->
+    <div class="tab-content" id="page-tab">
+      <div class="card">
+        <div class="label" style="margin-bottom: 6px;" data-i18n="lblDetectedCircles">Detected Circles on Active Page</div>
+        <div id="detected-count" style="font-size: 13px; font-weight: 600; color: #3b82f6;">
+          Scanning current page...
+        </div>
+      </div>
+      <div id="detected-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+        <!-- Dynamically injected items -->
+      </div>
+    </div>
+
+    <!-- Tab 3: Saved Circles & Budget Export -->
+    <div class="tab-content" id="stats-tab">
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-num" id="stat-d1">0</div>
+          <div class="stat-label" data-i18n="lblDay1Targets">Day 1 Targets</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" id="stat-d2">0</div>
+          <div class="stat-label" data-i18n="lblDay2Targets">Day 2 Targets</div>
+        </div>
+      </div>
+
+      <div class="card" style="text-align: center;">
+        <div class="label" data-i18n="lblTotalBudget">Total Est. Yen Cash Budget</div>
+        <div style="font-size: 22px; font-weight: 800; color: #f59e0b; margin-top: 4px;" id="stat-yen">
+          ¥0
+        </div>
+      </div>
+
+      <!-- Export Buttons -->
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+        <button class="btn-primary" id="btn-export-csv">
+          <span>📥</span> <span data-i18n="btnExportCSV">Export CSV for Google Sheets</span>
+        </button>
+        <button class="btn-primary" id="btn-copy-tsv" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+          <span>📋</span> <span data-i18n="btnCopyTSV">Copy Table for Google Sheets (Ctrl+V)</span>
+        </button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary" id="btn-export-json" style="flex: 1;">
+            <span>📄</span> <span data-i18n="btnJSONBackup">JSON Backup</span>
+          </button>
+          <button class="btn-secondary" id="btn-clear-items" style="color: #ef4444;">
+            <span>🗑️</span> <span data-i18n="btnClearList">Clear List</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-link" id="link-options">
+        <span>⚙️</span> <span data-i18n="btnSettings">Extension Settings</span>
+      </div>
+      <div class="footer-link" id="link-sheet" style="color: #10b981;">
+        <span>📊</span> <span data-i18n="btnOpenMasterSheet">Open Master Sheet</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="../src/utils/browser-poly.js"></script>
+  <script src="../src/utils/parser.js"></script>
+  <script src="../src/utils/exporter.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

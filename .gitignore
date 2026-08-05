@@ -1,0 +1,30 @@
+# Build & Distribution Artifacts
+dist/
+*.zip
+*.tar.gz
+
+# Local Debug Dumps & Test HTML Scrapes
+test_pages/
+counter_example/
+*.html.tmp
+*.log
+
+# Personal / Local Planning Documents
+Comiket 108 Battle Plan Strategy.md
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node & Package Managers
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
