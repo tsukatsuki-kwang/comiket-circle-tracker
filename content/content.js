@@ -9,7 +9,13 @@
   if (window.__comiketTrackerInjected) return;
   window.__comiketTrackerInjected = true;
 
-  console.log('[Comiket Tracker] Content script active with P2 (Medium) default priority.');
+  console.log('[Comiket Tracker] Content script active with Firefox AMO compliance.');
+
+  function setSafeHTML(element, htmlString) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, 'text/html');
+    element.replaceChildren(...doc.body.childNodes);
+  }
 
   function showToast(message, type = 'info') {
     const existing = document.querySelector('.comiket-toast');
@@ -17,7 +23,7 @@
 
     const toast = document.createElement('div');
     toast.className = `comiket-toast ${type}`;
-    toast.innerText = message;
+    toast.textContent = message;
     document.body.appendChild(toast);
 
     setTimeout(() => {
@@ -59,7 +65,7 @@
       </div>
     ` : '';
 
-    backdrop.innerHTML = `
+    const modalHtml = `
       <div class="comiket-modal-card">
         <div class="comiket-modal-header">
           <div class="comiket-modal-title">
@@ -147,6 +153,7 @@
       </div>
     `;
 
+    setSafeHTML(backdrop, modalHtml);
     document.body.appendChild(backdrop);
 
     const closeModal = () => backdrop.remove();
@@ -159,7 +166,7 @@
     backdrop.querySelector('#cmt-submit-btn').addEventListener('click', async () => {
       const submitBtn = backdrop.querySelector('#cmt-submit-btn');
       submitBtn.disabled = true;
-      submitBtn.innerText = 'Saving...';
+      submitBtn.textContent = 'Saving...';
 
       const building = backdrop.querySelector('#cmt-building').value;
       const block = backdrop.querySelector('#cmt-block').value;
@@ -259,11 +266,19 @@
       const btn = document.createElement('button');
       btn.className = 'comiket-tracker-btn';
       btn.type = 'button';
-      btn.innerHTML = `
-        <span style="color: #f59e0b;">⛩️</span>
-        <span>+ Track</span>
-        <span class="badge-tag">${escapeHtml(parsed.day)}: ${escapeHtml(parsed.building || parsed.hall)} ${escapeHtml(parsed.block)}-${escapeHtml(parsed.spaceNum || parsed.space)}</span>
-      `;
+
+      const iconSpan = document.createElement('span');
+      iconSpan.style.color = '#f59e0b';
+      iconSpan.textContent = '⛩️';
+
+      const labelSpan = document.createElement('span');
+      labelSpan.textContent = '+ Track';
+
+      const badgeSpan = document.createElement('span');
+      badgeSpan.className = 'badge-tag';
+      badgeSpan.textContent = `${parsed.day}: ${parsed.building || parsed.hall} ${parsed.block}-${parsed.spaceNum || parsed.space}`;
+
+      btn.replaceChildren(iconSpan, labelSpan, badgeSpan);
 
       btn.addEventListener('click', async (e) => {
         e.preventDefault();

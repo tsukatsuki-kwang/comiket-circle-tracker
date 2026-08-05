@@ -3,11 +3,17 @@
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
+  function setSafeHTML(element, htmlString) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, 'text/html');
+    element.replaceChildren(...doc.body.childNodes);
+  }
+
   // Apply i18n translations to elements with data-i18n
   document.querySelectorAll('[data-i18n]').forEach((elem) => {
     const key = elem.getAttribute('data-i18n');
     const msg = extAPI.getMessage(key);
-    if (msg) elem.innerText = msg;
+    if (msg) elem.textContent = msg;
   });
 
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -63,8 +69,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     currentParsed = ComiketParser.parse(text);
     if (currentParsed) {
-      previewDaySpace.innerText = `${currentParsed.day}: ${currentParsed.building || currentParsed.hall} ${currentParsed.block}-${currentParsed.spaceNum || currentParsed.space}`;
-      previewDetails.innerText = `Circle: ${currentParsed.circleName} | Price: ${currentParsed.price ? '¥' + currentParsed.price : 'TBD'}`;
+      previewDaySpace.textContent = `${currentParsed.day}: ${currentParsed.building || currentParsed.hall} ${currentParsed.block}-${currentParsed.spaceNum || currentParsed.space}`;
+      previewDetails.textContent = `Circle: ${currentParsed.circleName} | Price: ${currentParsed.price ? '¥' + currentParsed.price : 'TBD'}`;
       parsedPreview.style.display = 'block';
       btnManualSync.disabled = false;
     } else {
@@ -77,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnManualSync.addEventListener('click', async () => {
     if (!currentParsed) return;
     btnManualSync.disabled = true;
-    btnManualSync.innerText = 'Saving...';
+    btnManualSync.textContent = 'Saving...';
 
     const res = await extAPI.runtime.sendMessage({
       action: 'SAVE_CIRCLE',
@@ -87,41 +93,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (res && res.success) {
       manualText.value = '';
       parsedPreview.style.display = 'none';
-      btnManualSync.innerText = '✅ Saved to Comiket Plan!';
+      btnManualSync.textContent = '✅ Saved to Comiket Plan!';
       setTimeout(() => {
-        btnManualSync.innerHTML = `<span>💾</span> ${extAPI.getMessage('btnSaveCircle', 'Save Circle to Plan')}`;
+        const iconSpan = document.createElement('span');
+        iconSpan.textContent = '💾 ';
+        const textSpan = document.createElement('span');
+        textSpan.textContent = extAPI.getMessage('btnSaveCircle', 'Save Circle to Plan');
+        btnManualSync.replaceChildren(iconSpan, textSpan);
       }, 2500);
       refreshStats();
     } else {
-      btnManualSync.innerText = '⚠️ Save Failed';
+      btnManualSync.textContent = '⚠️ Save Failed';
       btnManualSync.disabled = false;
     }
   });
 
   // 3. Page Inspector Scanner
   async function scanActivePage() {
-    detectedCount.innerText = 'Scanning current page...';
-    detectedList.innerHTML = '';
+    detectedCount.textContent = 'Scanning current page...';
+    detectedList.replaceChildren();
 
     try {
       const [tab] = await extAPI.raw.tabs.query({ active: true, currentWindow: true });
       if (!tab) {
-        detectedCount.innerText = 'No active tab detected.';
+        detectedCount.textContent = 'No active tab detected.';
         return;
       }
 
       extAPI.raw.tabs.sendMessage(tab.id, { action: 'PARSE_ACTIVE_PAGE' }, (response) => {
         if (extAPI.raw.runtime.lastError || !response) {
-          detectedCount.innerText = 'Open an X (Twitter) page to inspect circle posts.';
+          detectedCount.textContent = 'Open an X (Twitter) page to inspect circle posts.';
           return;
         }
 
         if (response.count === 0) {
-          detectedCount.innerText = 'No Comiket circle posts detected on this view.';
+          detectedCount.textContent = 'No Comiket circle posts detected on this view.';
           return;
         }
 
-        detectedCount.innerText = `Found ${response.count} Comiket circle target(s)!`;
+        detectedCount.textContent = `Found ${response.count} Comiket circle target(s)!`;
 
         response.items.forEach((item) => {
           const card = document.createElement('div');
@@ -132,31 +142,45 @@ document.addEventListener('DOMContentLoaded', async () => {
           card.style.margin = '0';
           card.style.padding = '8px 12px';
 
-          card.innerHTML = `
-            <div>
-              <div style="font-weight: 700; color: #fff; font-size: 13px;">${escapeHtml(item.circleName)}</div>
-              <div style="font-size: 11px; color: #94a3b8;">${escapeHtml(item.day)}: ${escapeHtml(item.building || item.hall)} ${escapeHtml(item.block)}-${escapeHtml(item.spaceNum || item.space)}</div>
-            </div>
-            <button class="btn-secondary cmt-add-btn" style="padding: 4px 10px; font-size: 11px;">+ Add</button>
-          `;
+          const infoDiv = document.createElement('div');
+          const nameDiv = document.createElement('div');
+          nameDiv.style.fontWeight = '700';
+          nameDiv.style.color = '#fff';
+          nameDiv.style.fontSize = '13px';
+          nameDiv.textContent = item.circleName;
 
-          card.querySelector('.cmt-add-btn').addEventListener('click', async (e) => {
-            const addBtn = e.target;
+          const locDiv = document.createElement('div');
+          locDiv.style.fontSize = '11px';
+          locDiv.style.color = '#94a3b8';
+          locDiv.textContent = `${item.day}: ${item.building || item.hall} ${item.block}-${item.spaceNum || item.space}`;
+
+          infoDiv.appendChild(nameDiv);
+          infoDiv.appendChild(locDiv);
+
+          const addBtn = document.createElement('button');
+          addBtn.className = 'btn-secondary cmt-add-btn';
+          addBtn.style.padding = '4px 10px';
+          addBtn.style.fontSize = '11px';
+          addBtn.textContent = '+ Add';
+
+          addBtn.addEventListener('click', async () => {
             addBtn.disabled = true;
-            addBtn.innerText = 'Saving...';
+            addBtn.textContent = 'Saving...';
             const saveRes = await extAPI.runtime.sendMessage({ action: 'SAVE_CIRCLE', data: item });
             if (saveRes && saveRes.success) {
-              addBtn.innerText = '✅ Saved';
+              addBtn.textContent = '✅ Saved';
             } else {
-              addBtn.innerText = 'Failed';
+              addBtn.textContent = 'Failed';
             }
           });
 
+          card.appendChild(infoDiv);
+          card.appendChild(addBtn);
           detectedList.appendChild(card);
         });
       });
     } catch (err) {
-      detectedCount.innerText = 'Inspector error: ' + err.message;
+      detectedCount.textContent = 'Inspector error: ' + err.message;
     }
   }
 
@@ -175,9 +199,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (it.price) totalYen += Number(it.price);
     });
 
-    statD1.innerText = d1Count;
-    statD2.innerText = d2Count;
-    statYen.innerText = `¥${totalYen.toLocaleString()}`;
+    statD1.textContent = d1Count;
+    statD2.textContent = d2Count;
+    statYen.textContent = `¥${totalYen.toLocaleString()}`;
   }
 
   // Exporters
@@ -204,10 +228,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tsvContent = ComiketExporter.buildTSV(items);
     await navigator.clipboard.writeText(tsvContent);
 
-    const origText = btnCopyTSV.innerHTML;
-    btnCopyTSV.innerHTML = '<span>✅</span> Table Copied! Press Ctrl+V in Google Sheets';
+    const origChildNodes = Array.from(btnCopyTSV.childNodes).map(n => n.cloneNode(true));
+    btnCopyTSV.textContent = '✅ Table Copied! Press Ctrl+V in Google Sheets';
     setTimeout(() => {
-      btnCopyTSV.innerHTML = origText;
+      btnCopyTSV.replaceChildren(...origChildNodes);
     }, 3000);
   });
 
@@ -249,16 +273,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       extAPI.tabs.create({ url: 'options/options.html' });
     }
   });
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
 
   refreshStats();
 });
