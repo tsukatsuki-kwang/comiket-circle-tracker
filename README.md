@@ -1,5 +1,7 @@
 # ⛩️ Comiket Circle Tracker Sync Extension (C108)
 
+📖 **English** | [日本語版 (Japanese)](./README.ja.md)
+
 Cross-browser (Chrome & Firefox) Manifest V3 extension designed to automate Comiket 108 circle hunt planning. It dynamically scans circle announcement posts on X (Twitter), extracts Day, Building, Block, Space, Circle Name, Artist, Price, and Sample Image URLs, and syncs them to your Google Sheet or local storage.
 
 ---
@@ -23,7 +25,9 @@ Cross-browser (Chrome & Firefox) Manifest V3 extension designed to automate Comi
 ComiketPlanner/
 ├── manifest.json                  # Manifest V3 extension specification
 ├── Code.gs                        # Google Apps Script Web App backend code
-├── README.md                      # Setup guide & installation manual
+├── README.md                      # English setup guide & documentation
+├── README.ja.md                   # Japanese setup guide & documentation
+├── LICENSE                        # MIT License
 ├── _locales/                      # Internationalization (i18n)
 │   ├── en/messages.json           # English localization
 │   └── ja/messages.json           # Japanese localization
