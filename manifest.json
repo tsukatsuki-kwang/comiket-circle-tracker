@@ -36,17 +36,17 @@
     "https://*.melonbooks.co.jp/*"
   ],
   "background": {
-    "service_worker": "background/service-worker.js",
     "scripts": [
       "src/utils/browser-poly.js",
       "src/utils/exporter.js",
       "background/service-worker.js"
-    ]
+    ],
+    "service_worker": "background/service-worker.js"
   },
   "browser_specific_settings": {
     "gecko": {
       "id": "comiket-circle-tracker@comiketplanner.org",
-      "strict_min_version": "109.0",
+      "strict_min_version": "140.0",
       "data_collection_permissions": {
         "required": [
           "none"
