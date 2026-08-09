@@ -5,10 +5,12 @@
 
 (function (global) {
   // Primary Location Regex (With explicit building direction Kanji [東西南] or English [East|West|South|[EWS]])
-  const COMIKET_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)?\s*(?:([東西南])\s*([1-8１-８])?|\b(East|West|South|[EWS])\b\s*([1-8])?)\s*(?:ホール|Hall)?\s*[-ー―‐/]?\s*([ぁ-んァ-ヶ]{1,2}|[a-zA-Z]{1,2})\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
+  const COMIKET_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)?\s*(?:([東西南])\s*([1-8１-８])?|\b(East|West|South|[EWS])\b\s*([1-8])?)\s*(?:ホール|Hall)?\s*[-ー―‐/]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
+
+  const GLOBAL_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)?\s*(?:([東西南])\s*([1-8１-８])?|\b(East|West|South|[EWS])\b\s*([1-8])?)\s*(?:ホール|Hall)?\s*[-ー―‐/]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/gi;
 
   // Fallback Location Regex (Day + Block + Space Number without explicit building direction, e.g. 土曜日ス-20ab)
-  const DAY_BLOCK_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)\s*[-ー―‐/]?\s*([ぁ-んァ-ヶ]{1,2}|[a-zA-Z]{1,2})\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
+  const DAY_BLOCK_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)\s*[-ー―‐/]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
 
   const EXPLICIT_PRICE_REGEX = /(?:¥|￥|価格[:：]?\s*)([1-9][0-9]{2,4})|([1-9][0-9]{2,4})\s*(?:円|yen|Yen|YEN)/i;
 
@@ -22,24 +24,52 @@
   }
 
   function parseComiketText(text, options = {}) {
-    if (!text || typeof text !== 'string') return null;
+    const all = parseAllComiketText(text, options);
+    return all.length > 0 ? all[0] : null;
+  }
+
+  function parseAllComiketText(text, options = {}) {
+    if (!text || typeof text !== 'string') return [];
 
     const normalizedText = normalizeFullWidth(text);
-    let match = normalizedText.match(COMIKET_LOCATION_REGEX);
+    const matches = [...normalizedText.matchAll(GLOBAL_LOCATION_REGEX)];
 
-    let dayRaw, hallKanjiRaw, hallKanjiNumRaw, hallEngRaw, hallEngNumRaw, blockRaw, numRaw, posRaw;
+    const results = [];
+    const seenSpaces = new Set();
 
-    if (match) {
-      [_, dayRaw, hallKanjiRaw, hallKanjiNumRaw, hallEngRaw, hallEngNumRaw, blockRaw, numRaw, posRaw] = match;
-    } else {
-      const fallbackMatch = normalizedText.match(DAY_BLOCK_LOCATION_REGEX);
-      if (fallbackMatch) {
-        [_, dayRaw, blockRaw, numRaw, posRaw] = fallbackMatch;
+    if (matches.length > 0) {
+      for (const match of matches) {
+        const [matchStr, dayRaw, hallKanjiRaw, hallKanjiNumRaw, hallEngRaw, hallEngNumRaw, blockRaw, numRaw, posRaw] = match;
+        if (!blockRaw || !numRaw) continue;
+
+        const target = buildTargetObject(normalizedText, text, matchStr, dayRaw, hallKanjiRaw, hallKanjiNumRaw, hallEngRaw, hallEngNumRaw, blockRaw, numRaw, posRaw, options);
+        if (target) {
+          const uniqueKey = `${target.day}:${target.space}`;
+          if (!seenSpaces.has(uniqueKey)) {
+            seenSpaces.add(uniqueKey);
+            results.push(target);
+          }
+        }
       }
     }
 
-    if (!blockRaw || !numRaw) return null;
+    if (results.length === 0) {
+      const fallbackMatch = normalizedText.match(DAY_BLOCK_LOCATION_REGEX);
+      if (fallbackMatch) {
+        const [matchStr, dayRaw, blockRaw, numRaw, posRaw] = fallbackMatch;
+        if (blockRaw && numRaw) {
+          const target = buildTargetObject(normalizedText, text, matchStr, dayRaw, null, null, null, null, blockRaw, numRaw, posRaw, options);
+          if (target) {
+            results.push(target);
+          }
+        }
+      }
+    }
 
+    return results;
+  }
+
+  function buildTargetObject(normalizedText, rawText, matchStr, dayRaw, hallKanjiRaw, hallKanjiNumRaw, hallEngRaw, hallEngNumRaw, blockRaw, numRaw, posRaw, options) {
     const hallDirRaw = hallKanjiRaw || hallEngRaw;
     const hallNumRaw = hallKanjiNumRaw || hallEngNumRaw;
 
@@ -120,7 +150,7 @@
 
     let artistHandle = options.authorHandle || '';
     if (!artistHandle || artistHandle === '@C108') {
-      const handleMatch = text.match(/(?:^|\s)@([A-Za-z0-9_]{4,15})\b/);
+      const handleMatch = rawText.match(/(?:^|\s)@([A-Za-z0-9_]{4,15})\b/);
       if (handleMatch) {
         artistHandle = `@${handleMatch[1]}`;
       }
@@ -128,7 +158,7 @@
 
     // 5. Extract Circle Name
     let circleName = '';
-    const bracketMatch = text.match(/「([^」]{2,30})」|『([^』]{2,30})』/);
+    const bracketMatch = rawText.match(/「([^」]{2,30})」|『([^』]{2,30})』/);
     if (bracketMatch) {
       const candidate = (bracketMatch[1] || bracketMatch[2]).trim();
       if (!candidate.match(/^[東西南EWS土日12]/i) && !candidate.match(/ブロック|ホール|地区/)) {
@@ -137,7 +167,7 @@
     }
 
     if (!circleName) {
-      const circleKeywordMatch = text.match(/サークル名?[:：]?\s*([^\s\n\r@#「」『』]{2,25})/);
+      const circleKeywordMatch = rawText.match(/サークル名?[:：]?\s*([^\s\n\r@#「」『』]{2,25})/);
       if (circleKeywordMatch && circleKeywordMatch[1]) {
         const candidate = circleKeywordMatch[1].trim();
         if (!candidate.match(/^(?:情報|配置|参加|一覧|マップ|スペース|チェック|Webカタログ|カタログ)/)) {
@@ -150,8 +180,8 @@
       circleName = artistName || artistHandle.replace(/^@/, '') || 'Unknown Circle';
     }
 
-    let description = text.trim();
-    const melonMatch = text.match(/https?:\/\/(?:www\.)?melonbooks\.co\.jp\/(?:detail\/detail\.php\?product_id=\d+|circle\/index\.php\?circle_id=\d+)/i);
+    let description = rawText.trim();
+    const melonMatch = rawText.match(/https?:\/\/(?:www\.)?melonbooks\.co\.jp\/(?:detail\/detail\.php\?product_id=\d+|circle\/index\.php\?circle_id=\d+)/i);
     const shopUrl = melonMatch ? melonMatch[0] : (options.shopUrl || '');
 
     // 6. Source URL & Generated Image URL
@@ -170,7 +200,7 @@
     // 7. Direct Sample Image URL resolution
     let imageUrl = options.imageUrl || '';
     if (!imageUrl) {
-      const twimgMatch = text.match(/https?:\/\/pbs\.twimg\.com\/media\/[A-Za-z0-9_-]+(?:\?[^"\s\n\r]+)?/i);
+      const twimgMatch = rawText.match(/https?:\/\/pbs\.twimg\.com\/media\/[A-Za-z0-9_-]+(?:\?[^"\s\n\r]+)?/i);
       if (twimgMatch) {
         imageUrl = twimgMatch[0];
       } else if (tweetId) {
@@ -198,7 +228,7 @@
       circleName: circleName,
       artist: artistName ? (artistHandle ? `${artistName} (${artistHandle})` : artistName) : artistHandle,
       description: description.length > 120 ? description.substring(0, 117) + '...' : description,
-      fullText: text,
+      fullText: rawText,
       price: price,
       imageUrl: imageUrl,
       fixupUrl: fixupUrl,
@@ -211,6 +241,7 @@
 
   const parserObj = {
     parse: parseComiketText,
+    parseAll: parseAllComiketText,
     normalizeFullWidth: normalizeFullWidth,
     LOCATION_REGEX: COMIKET_LOCATION_REGEX
   };

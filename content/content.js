@@ -9,7 +9,7 @@
   if (window.__comiketTrackerInjected) return;
   window.__comiketTrackerInjected = true;
 
-  console.log('[Comiket Tracker] Content script active with Firefox AMO compliance.');
+  console.log('[Comiket Tracker] Content script active with multi-day target extraction.');
 
   function setSafeHTML(element, htmlString) {
     const parser = new DOMParser();
@@ -256,46 +256,53 @@
 
     const combinedText = `${authorName} ${tweetText}`;
 
-    const parsed = ComiketParser.parse(combinedText, { authorHandle, authorName, sourceUrl, imageUrl });
+    const parsedTargets = ComiketParser.parseAll(combinedText, { authorHandle, authorName, sourceUrl, imageUrl });
 
-    if (parsed) {
+    if (parsedTargets.length > 0) {
       article.setAttribute('data-comiket-processed', 'true');
 
       const actionGroup = article.querySelector('div[role="group"]') || (textElement ? textElement.parentNode : article);
 
-      const btn = document.createElement('button');
-      btn.className = 'comiket-tracker-btn';
-      btn.type = 'button';
+      const wrapper = document.createElement('div');
+      wrapper.style.display = 'flex';
+      wrapper.style.flexWrap = 'wrap';
+      wrapper.style.gap = '6px';
+      wrapper.style.width = '100%';
+      wrapper.style.margin = '6px 0';
 
-      const iconSpan = document.createElement('span');
-      iconSpan.style.color = '#f59e0b';
-      iconSpan.textContent = '⛩️';
+      parsedTargets.forEach((parsed) => {
+        const btn = document.createElement('button');
+        btn.className = 'comiket-tracker-btn';
+        btn.type = 'button';
 
-      const labelSpan = document.createElement('span');
-      labelSpan.textContent = '+ Track';
+        const iconSpan = document.createElement('span');
+        iconSpan.style.color = '#f59e0b';
+        iconSpan.textContent = '⛩️';
 
-      const badgeSpan = document.createElement('span');
-      badgeSpan.className = 'badge-tag';
-      badgeSpan.textContent = `${parsed.day}: ${parsed.building || parsed.hall} ${parsed.block}-${parsed.spaceNum || parsed.space}`;
+        const labelSpan = document.createElement('span');
+        labelSpan.textContent = '+ Track';
 
-      btn.replaceChildren(iconSpan, labelSpan, badgeSpan);
+        const badgeSpan = document.createElement('span');
+        badgeSpan.className = 'badge-tag';
+        badgeSpan.textContent = `${parsed.day}: ${parsed.building || parsed.hall} ${parsed.block}-${parsed.spaceNum || parsed.space}`;
 
-      btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        await openPreviewModal(parsed);
+        btn.replaceChildren(iconSpan, labelSpan, badgeSpan);
+
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          await openPreviewModal(parsed);
+        });
+
+        wrapper.appendChild(btn);
       });
 
       if (actionGroup && actionGroup.parentNode) {
-        const wrapper = document.createElement('div');
-        wrapper.style.display = 'block';
-        wrapper.style.width = '100%';
-        wrapper.appendChild(btn);
         actionGroup.parentNode.insertBefore(wrapper, actionGroup);
       } else if (textElement) {
-        textElement.appendChild(btn);
+        textElement.appendChild(wrapper);
       } else {
-        article.appendChild(btn);
+        article.appendChild(wrapper);
       }
     }
   }
@@ -337,10 +344,13 @@
             const imgEl = art.querySelector('div[data-testid="tweetPhoto"] img, img[src*="pbs.twimg.com/media"]');
             const combined = `${userNamesElem ? userNamesElem.innerText : ''} ${textElem ? textElem.innerText : ''}`;
 
-            const parsed = ComiketParser.parse(combined, { imageUrl: imgEl ? imgEl.src : '' });
-            if (parsed && !activeItems.some(it => it.space === parsed.space)) {
-              activeItems.push(parsed);
-            }
+            const targets = ComiketParser.parseAll(combined, { imageUrl: imgEl ? imgEl.src : '' });
+            targets.forEach((parsed) => {
+              const uniqueKey = `${parsed.day}:${parsed.space}`;
+              if (!activeItems.some(it => `${it.day}:${it.space}` === uniqueKey)) {
+                activeItems.push(parsed);
+              }
+            });
           });
 
           sendResponse({ count: activeItems.length, items: activeItems });
