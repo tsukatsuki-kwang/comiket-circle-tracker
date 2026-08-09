@@ -10,9 +10,10 @@ if (!fs.existsSync(distDir)) {
   fs.mkdirSync(distDir, { recursive: true });
 }
 
-// Read base manifest
+// Read base manifest and version
 const manifestPath = path.join(repoDir, 'manifest.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+const version = manifest.version || '1.3.1';
 
 // 1. Build Firefox Specific Package (0 Warnings on Firefox AMO)
 const firefoxManifest = JSON.parse(JSON.stringify(manifest));
@@ -52,7 +53,7 @@ function createPackage(targetName, targetManifest) {
   fs.writeFileSync(path.join(targetTemp, 'manifest.json'), JSON.stringify(targetManifest, null, 2), 'utf8');
 
   // Zip using tar.exe with POSIX slashes
-  const zipName = `comiket-circle-tracker-${targetName}-v1.3.0.zip`;
+  const zipName = `comiket-circle-tracker-${targetName}-v${version}.zip`;
   const zipPath = path.join(distDir, zipName);
   if (fs.existsSync(zipPath)) {
     fs.unlinkSync(zipPath);
@@ -68,4 +69,4 @@ function createPackage(targetName, targetManifest) {
 createPackage('firefox', firefoxManifest);
 createPackage('chrome', chromeManifest);
 
-console.log('🎉 Dual browser packages generated successfully in dist/!');
+console.log(`🎉 Dual browser packages generated successfully for v${version} in dist/!`);
