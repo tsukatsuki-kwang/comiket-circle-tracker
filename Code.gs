@@ -1,6 +1,6 @@
 /**
  * Comiket 108 Master Sheet - Google Apps Script Web App Backend
- * Receives circle tracking payloads and appends them to your Google Sheet with Day 1 & Day 2 Location columns.
+ * Receives circle tracking payloads and appends them to your Google Sheet matching your Master Sheet layout.
  */
 
 function doPost(e) {
@@ -11,23 +11,19 @@ function doPost(e) {
     // Initialize headers if sheet is brand new
     if (sheet.getLastRow() === 0) {
       sheet.appendRow([
-        'Day 1 Location',
-        'Day 2 Location',
+        'Circle',
+        'Product',
+        'Day 1 Position',
+        'Day 2 Position',
         'Priority',
-        'Building',
-        'Block',
-        'Space',
-        'Circle Name',
-        'Artist / Author',
+        'Price (¥)',
         'Sample Image',
-        'Item Description',
-        'Price (JPY)',
         'Tweet Link',
-        'Shop Link',
-        'Notes',
-        'Added At'
+        'Web Purchase',
+        'Status',
+        'Note'
       ]);
-      sheet.getRange(1, 1, 1, 15).setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
+      sheet.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
     }
 
     var imageFormula = data.imageUrl ? '=IMAGE("' + data.imageUrl + '")' : '';
@@ -44,21 +40,17 @@ function doPost(e) {
     var day2Loc = data.day2Location || (dayCode === 'D2' ? fullLoc : '');
 
     sheet.appendRow([
+      data.circleName || 'Unknown Circle',
+      data.description || data.product || '',
       day1Loc,
       day2Loc,
       data.priority || 'P2 (Medium)',
-      building,
-      block,
-      space,
-      data.circleName || '',
-      data.artist || '',
-      imageFormula,
-      data.description || '',
       data.price ? Number(data.price) : '',
+      imageFormula,
       tweetFormula || data.sourceUrl || '',
       shopFormula || data.shopUrl || '',
-      data.notes || 'Imported via Extension',
-      new Date().toISOString()
+      data.status || 'Pending',
+      data.notes || 'Imported via Extension'
     ]);
 
     return ContentService.createTextOutput(JSON.stringify({ result: 'success' }))

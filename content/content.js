@@ -45,7 +45,7 @@
     const includeDescription = settings.includeDescription !== false; // Default true
 
     let selectedPriority = 'P2 (Medium)';
-    if (settings.defaultPriority && (settings.defaultPriority.startsWith('P1') || settings.defaultPriority.startsWith('P3'))) {
+    if (settings.defaultPriority && (settings.defaultPriority.startsWith('P0') || settings.defaultPriority.startsWith('P1') || settings.defaultPriority.startsWith('P3'))) {
       selectedPriority = settings.defaultPriority;
     }
 
@@ -87,6 +87,7 @@
             <div class="comiket-field-group">
               <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Priority', '優先度'))}</label>
               <select class="comiket-select" id="cmt-priority">
+                <option value="P0 (Top)" ${selectedPriority.includes('P0') ? 'selected' : ''}>${escapeHtml(extAPI.getBilingualText('P0 (Top / Wall Circle)', 'P0 (壁超最優先 / 大壁)'))}</option>
                 <option value="P1 (High)" ${selectedPriority.includes('P1') ? 'selected' : ''}>${escapeHtml(extAPI.getBilingualText('P1 (High / Wall Circle)', 'P1 (最優先 / 壁サークル)'))}</option>
                 <option value="P2 (Medium)" ${selectedPriority.includes('P2') ? 'selected' : ''}>${escapeHtml(extAPI.getBilingualText('P2 (Medium / Island)', 'P2 (一般 / 島サークル)'))}</option>
                 <option value="P3 (Low)" ${selectedPriority.includes('P3') ? 'selected' : ''}>${escapeHtml(extAPI.getBilingualText('P3 (Low / Backup)', 'P3 (予備 / 後回し)'))}</option>
@@ -174,7 +175,7 @@
       const dayVal = backdrop.querySelector('#cmt-day').value;
       const dayCode = dayVal.includes('2') ? 'D2' : 'D1';
 
-      const fullLocation = `${dayCode} ${building} ${block}-${spaceNum}`.trim();
+      const fullLocation = `${dayCode} ${building} ${block ? block + '-' : ''}${spaceNum}`.trim();
 
       const payload = {
         day: dayVal,
@@ -184,7 +185,7 @@
         hall: building,
         block: block,
         spaceNum: spaceNum,
-        space: `${building} ${block}-${spaceNum}`.trim(),
+        space: `${building} ${block ? block + '-' : ''}${spaceNum}`.trim(),
         fullLocation: fullLocation,
         day1Location: parsedData.day1Location || (dayCode === 'D1' ? fullLocation : ''),
         day2Location: parsedData.day2Location || (dayCode === 'D2' ? fullLocation : ''),
@@ -196,6 +197,7 @@
         fixupUrl: backdrop.querySelector('#cmt-fixup-url').value,
         description: backdrop.querySelector('#cmt-desc').value,
         shopUrl: parsedData.shopUrl || '',
+        status: 'Pending',
         timestamp: new Date().toISOString()
       };
 

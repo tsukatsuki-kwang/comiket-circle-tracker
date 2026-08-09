@@ -16,59 +16,54 @@
     const building = item.building || item.hall || '東123';
     const block = item.block || '';
     const space = item.spaceNum || item.space || '';
-    const fullLoc = item.fullLocation || `${dayCode} ${building} ${block}-${space}`.trim();
+    const fullLoc = item.fullLocation || `${dayCode} ${building} ${block ? block + '-' : ''}${space}`.trim();
 
     const day1Loc = item.day1Location || (dayCode === 'D1' ? fullLoc : '');
     const day2Loc = item.day2Location || (dayCode === 'D2' ? fullLoc : '');
 
     const priority = item.priority || 'P2 (Medium)';
     const circleName = item.circleName || 'Unknown Circle';
+    const product = item.description || item.product || '';
     const artist = item.artist || '';
 
     const imageFormula = item.imageUrl ? `=IMAGE("${item.imageUrl}")` : '';
     const tweetFormula = item.sourceUrl ? `=HYPERLINK("${item.sourceUrl}", "View Tweet")` : '';
     const shopFormula = item.shopUrl ? `=HYPERLINK("${item.shopUrl}", "Shop / Order")` : '';
-    const description = item.description || '';
     const price = item.price ? Number(item.price) : '';
+    const status = item.status || 'Pending';
     const notes = item.notes || '';
     const timestamp = item.timestamp || new Date().toISOString();
 
     return {
+      circleName,
+      product,
       day1Loc,
       day2Loc,
       priority,
-      building,
-      block,
-      space,
-      circleName,
-      artist,
-      imageFormula,
-      description,
       price,
+      imageFormula,
       tweetFormula,
       shopFormula,
+      status,
       notes,
+      artist,
       timestamp
     };
   }
 
   function buildCSV(circleItems) {
     const headers = [
-      'Day 1 Location',
-      'Day 2 Location',
+      'Circle',
+      'Product',
+      'Day 1 Position',
+      'Day 2 Position',
       'Priority',
-      'Building',
-      'Block',
-      'Space',
-      'Circle Name',
-      'Artist / Author',
+      'Price (¥)',
       'Sample Image',
-      'Item Description',
-      'Price (JPY)',
       'Tweet Link',
-      'Shop Link',
-      'Notes',
-      'Added At'
+      'Web Purchase',
+      'Status',
+      'Note'
     ];
 
     const rows = [headers.map(escapeCSVCell).join(',')];
@@ -76,21 +71,17 @@
     circleItems.forEach((item) => {
       const r = formatRowData(item);
       const row = [
+        escapeCSVCell(r.circleName),
+        escapeCSVCell(r.product),
         escapeCSVCell(r.day1Loc),
         escapeCSVCell(r.day2Loc),
         escapeCSVCell(r.priority),
-        escapeCSVCell(r.building),
-        escapeCSVCell(r.block),
-        escapeCSVCell(r.space),
-        escapeCSVCell(r.circleName),
-        escapeCSVCell(r.artist),
-        escapeCSVCell(r.imageFormula),
-        escapeCSVCell(r.description),
         escapeCSVCell(r.price),
+        escapeCSVCell(r.imageFormula),
         escapeCSVCell(r.tweetFormula),
         escapeCSVCell(r.shopFormula),
-        escapeCSVCell(r.notes),
-        escapeCSVCell(r.timestamp)
+        escapeCSVCell(r.status),
+        escapeCSVCell(r.notes)
       ];
       rows.push(row.join(','));
     });
@@ -100,21 +91,17 @@
 
   function buildTSV(circleItems) {
     const headers = [
-      'Day 1 Location',
-      'Day 2 Location',
+      'Circle',
+      'Product',
+      'Day 1 Position',
+      'Day 2 Position',
       'Priority',
-      'Building',
-      'Block',
-      'Space',
-      'Circle Name',
-      'Artist / Author',
+      'Price (¥)',
       'Sample Image',
-      'Item Description',
-      'Price (JPY)',
       'Tweet Link',
-      'Shop Link',
-      'Notes',
-      'Added At'
+      'Web Purchase',
+      'Status',
+      'Note'
     ];
 
     const rows = [headers.join('\t')];
@@ -122,21 +109,17 @@
     circleItems.forEach((item) => {
       const r = formatRowData(item);
       const row = [
+        r.circleName,
+        r.product,
         r.day1Loc,
         r.day2Loc,
         r.priority,
-        r.building,
-        r.block,
-        r.space,
-        r.circleName,
-        r.artist,
-        r.imageFormula,
-        r.description,
         r.price,
+        r.imageFormula,
         r.tweetFormula,
         r.shopFormula,
-        r.notes,
-        r.timestamp
+        r.status,
+        r.notes
       ];
       rows.push(row.join('\t'));
     });
