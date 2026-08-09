@@ -12,10 +12,16 @@
 
   function formatRowData(item) {
     const day = item.day || 'Day 1';
-    const priority = item.priority || 'P1 (High)';
-    const building = item.building || item.hall || '';
+    const dayCode = item.dayCode || (day.includes('2') ? 'D2' : 'D1');
+    const building = item.building || item.hall || '東123';
     const block = item.block || '';
     const space = item.spaceNum || item.space || '';
+    const fullLoc = item.fullLocation || `${dayCode} ${building} ${block}-${space}`.trim();
+
+    const day1Loc = item.day1Location || (dayCode === 'D1' ? fullLoc : '');
+    const day2Loc = item.day2Location || (dayCode === 'D2' ? fullLoc : '');
+
+    const priority = item.priority || 'P2 (Medium)';
     const circleName = item.circleName || 'Unknown Circle';
     const artist = item.artist || '';
 
@@ -28,7 +34,8 @@
     const timestamp = item.timestamp || new Date().toISOString();
 
     return {
-      day,
+      day1Loc,
+      day2Loc,
       priority,
       building,
       block,
@@ -47,7 +54,8 @@
 
   function buildCSV(circleItems) {
     const headers = [
-      'Day',
+      'Day 1 Location',
+      'Day 2 Location',
       'Priority',
       'Building',
       'Block',
@@ -68,7 +76,8 @@
     circleItems.forEach((item) => {
       const r = formatRowData(item);
       const row = [
-        escapeCSVCell(r.day),
+        escapeCSVCell(r.day1Loc),
+        escapeCSVCell(r.day2Loc),
         escapeCSVCell(r.priority),
         escapeCSVCell(r.building),
         escapeCSVCell(r.block),
@@ -91,7 +100,8 @@
 
   function buildTSV(circleItems) {
     const headers = [
-      'Day',
+      'Day 1 Location',
+      'Day 2 Location',
       'Priority',
       'Building',
       'Block',
@@ -112,7 +122,8 @@
     circleItems.forEach((item) => {
       const r = formatRowData(item);
       const row = [
-        r.day,
+        r.day1Loc,
+        r.day2Loc,
         r.priority,
         r.building,
         r.block,

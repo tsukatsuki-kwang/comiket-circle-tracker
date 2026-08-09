@@ -1,6 +1,6 @@
 /**
  * Comiket 108 Master Sheet - Google Apps Script Web App Backend
- * Receives circle tracking payloads and appends them to your Google Sheet with separate Building, Block, and Space columns.
+ * Receives circle tracking payloads and appends them to your Google Sheet with Day 1 & Day 2 Location columns.
  */
 
 function doPost(e) {
@@ -11,7 +11,8 @@ function doPost(e) {
     // Initialize headers if sheet is brand new
     if (sheet.getLastRow() === 0) {
       sheet.appendRow([
-        'Day',
+        'Day 1 Location',
+        'Day 2 Location',
         'Priority',
         'Building',
         'Block',
@@ -26,20 +27,26 @@ function doPost(e) {
         'Notes',
         'Added At'
       ]);
-      sheet.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
+      sheet.getRange(1, 1, 1, 15).setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
     }
 
     var imageFormula = data.imageUrl ? '=IMAGE("' + data.imageUrl + '")' : '';
     var tweetFormula = data.sourceUrl ? '=HYPERLINK("' + data.sourceUrl + '", "View Tweet")' : '';
     var shopFormula = data.shopUrl ? '=HYPERLINK("' + data.shopUrl + '", "Shop / Order")' : '';
 
-    var building = data.building || data.hall || '';
+    var dayCode = data.dayCode || (data.day && data.day.includes('2') ? 'D2' : 'D1');
+    var building = data.building || data.hall || '東123';
     var block = data.block || '';
     var space = data.spaceNum || data.space || '';
+    var fullLoc = data.fullLocation || (dayCode + ' ' + building + ' ' + (block ? block + '-' : '') + space).trim();
+
+    var day1Loc = data.day1Location || (dayCode === 'D1' ? fullLoc : '');
+    var day2Loc = data.day2Location || (dayCode === 'D2' ? fullLoc : '');
 
     sheet.appendRow([
-      data.day || 'Day 1',
-      data.priority || 'P1 (High)',
+      day1Loc,
+      day2Loc,
+      data.priority || 'P2 (Medium)',
       building,
       block,
       space,

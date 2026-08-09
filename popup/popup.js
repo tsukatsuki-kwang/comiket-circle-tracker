@@ -69,7 +69,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     currentParsed = ComiketParser.parse(text);
     if (currentParsed) {
-      previewDaySpace.textContent = `${currentParsed.day}: ${currentParsed.building || currentParsed.hall} ${currentParsed.block}-${currentParsed.spaceNum || currentParsed.space}`;
+      const fullLoc = currentParsed.fullLocation || `${currentParsed.dayCode || 'D1'} ${currentParsed.building} ${currentParsed.block}-${currentParsed.spaceNum}`;
+      previewDaySpace.textContent = fullLoc;
       previewDetails.textContent = `Circle: ${currentParsed.circleName} | Price: ${currentParsed.price ? '¥' + currentParsed.price : 'TBD'}`;
       parsedPreview.style.display = 'block';
       btnManualSync.disabled = false;
@@ -152,7 +153,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           const locDiv = document.createElement('div');
           locDiv.style.fontSize = '11px';
           locDiv.style.color = '#94a3b8';
-          locDiv.textContent = `${item.day}: ${item.building || item.hall} ${item.block}-${item.spaceNum || item.space}`;
+          const fullLoc = item.fullLocation || `${item.dayCode || 'D1'} ${item.building || item.hall} ${item.block}-${item.spaceNum || item.space}`;
+          locDiv.textContent = fullLoc;
 
           infoDiv.appendChild(nameDiv);
           infoDiv.appendChild(locDiv);
@@ -194,8 +196,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let totalYen = 0;
 
     items.forEach((it) => {
-      if (it.day === 'Day 1') d1Count++;
-      if (it.day === 'Day 2') d2Count++;
+      if (it.day === 'Day 1' || it.dayCode === 'D1') d1Count++;
+      if (it.day === 'Day 2' || it.dayCode === 'D2') d2Count++;
       if (it.price) totalYen += Number(it.price);
     });
 

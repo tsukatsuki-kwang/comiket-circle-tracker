@@ -23,6 +23,46 @@
       .replace(/[－―‐]/g, '-');
   }
 
+  function formatBuildingGroup(building, hallNum) {
+    let b = (building || '').trim();
+
+    if (b === 'East' || b === 'E') b = '東';
+    if (b === 'West' || b === 'W') b = '西';
+    if (b === 'South' || b === 'S') b = '南';
+
+    const num = parseInt(hallNum, 10);
+
+    if (b === '東') {
+      if (num >= 4 && num <= 6) return '東456';
+      if (num === 7) return '東7';
+      if (num === 8) return '東8';
+      return '東123';
+    }
+    if (b === '西') {
+      return '西12';
+    }
+    if (b === '南') {
+      if (num >= 3 && num <= 4) return '南34';
+      return '南12';
+    }
+
+    return b || '東123';
+  }
+
+  function formatDayCode(day) {
+    if (!day) return 'D1';
+    const str = String(day).toLowerCase();
+    if (str.includes('2') || str.includes('二') || str.includes('日')) return 'D2';
+    return 'D1';
+  }
+
+  function formatFullLocation(day, building, block, spaceNum, hallNum = '') {
+    const dayCode = formatDayCode(day);
+    const bg = formatBuildingGroup(building, hallNum);
+    const pos = `${block || ''}-${spaceNum || ''}`.trim().replace(/^-/, '');
+    return `${dayCode} ${bg} ${pos}`.trim();
+  }
+
   function parseComiketText(text, options = {}) {
     const all = parseAllComiketText(text, options);
     return all.length > 0 ? all[0] : null;
@@ -66,6 +106,18 @@
       }
     }
 
+    // Cross-link Day 1 & Day 2 locations if both are present in the same post
+    if (results.length >= 2) {
+      const d1Item = results.find(r => r.dayCode === 'D1');
+      const d2Item = results.find(r => r.dayCode === 'D2');
+      if (d1Item && d2Item) {
+        results.forEach(r => {
+          r.day1Location = d1Item.fullLocation;
+          r.day2Location = d2Item.fullLocation;
+        });
+      }
+    }
+
     return results;
   }
 
@@ -89,7 +141,7 @@
       }
     }
 
-    // 2. Map Hall Direction & Building
+    // 2. Map Hall Direction & Building Group
     const hallDirMap = {
       '東': 'East',
       '西': 'West',
@@ -118,11 +170,13 @@
     const dirKanji = dirKanjiMap[dirEnglish] || (hallDirRaw ? hallDirRaw : '西');
     const hallNum = hallNumRaw ? hallNumRaw : '';
 
-    const building = dirKanji;
-    const buildingEng = dirEnglish;
+    const buildingGroup = formatBuildingGroup(dirKanji, hallNum);
+    const dayCode = formatDayCode(day);
+
     const block = blockRaw;
     const spaceNum = `${numRaw}${posRaw ? posRaw.toLowerCase() : ''}`;
     const spaceFormatted = `${dirKanji}${hallNum ? hallNum + ' ' : ' '}${blockRaw}-${spaceNum}`.trim();
+    const fullLocation = formatFullLocation(day, dirKanji, blockRaw, spaceNum, hallNum);
 
     // 3. Extract Price (JPY)
     let price = '';
@@ -228,13 +282,17 @@
 
     return {
       day: day,
-      priority: 'P2 (Medium)', // Default P2 (Medium)
-      hall: buildingEng,
-      building: building,        // "東", "西", "南"
-      buildingEng: buildingEng,   // "East", "West", "South"
-      block: block,              // "ウ", "ア", "め"
-      spaceNum: spaceNum,        // "11a", "26ab", "58ab"
-      space: spaceFormatted,     // "東 ウ-11a"
+      dayCode: dayCode,                           // "D1", "D2"
+      priority: 'P2 (Medium)',
+      hall: dirEnglish,
+      building: buildingGroup,                     // "東123", "東456", "東7", "東8", "西12", "南12"
+      buildingEng: dirEnglish,
+      block: block,                               // "ア", "カ", "め"
+      spaceNum: spaceNum,                         // "11a", "26ab", "58ab"
+      space: spaceFormatted,                      // "東123 ア-11a"
+      fullLocation: fullLocation,                 // "D1 東123 ア-11a"
+      day1Location: dayCode === 'D1' ? fullLocation : '',
+      day2Location: dayCode === 'D2' ? fullLocation : '',
       circleName: circleName,
       artist: artistName ? (artistHandle ? `${artistName} (${artistHandle})` : artistName) : artistHandle,
       description: description.length > 120 ? description.substring(0, 117) + '...' : description,
@@ -253,6 +311,9 @@
     parse: parseComiketText,
     parseAll: parseAllComiketText,
     normalizeFullWidth: normalizeFullWidth,
+    formatBuildingGroup: formatBuildingGroup,
+    formatDayCode: formatDayCode,
+    formatFullLocation: formatFullLocation,
     LOCATION_REGEX: COMIKET_LOCATION_REGEX
   };
 

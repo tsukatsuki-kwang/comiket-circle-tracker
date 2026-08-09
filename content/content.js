@@ -96,8 +96,8 @@
 
           <div class="comiket-field-row three-cols">
             <div class="comiket-field-group">
-              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Building', '館名'))}</label>
-              <input type="text" class="comiket-input" id="cmt-building" value="${escapeHtml(parsedData.building || parsedData.hall || '')}" placeholder="東/西/南">
+              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Building Group', '館グループ'))}</label>
+              <input type="text" class="comiket-input" id="cmt-building" value="${escapeHtml(parsedData.building || parsedData.hall || '')}" placeholder="東123/西12/南12">
             </div>
             <div class="comiket-field-group">
               <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Block', 'ブロック'))}</label>
@@ -171,15 +171,23 @@
       const building = backdrop.querySelector('#cmt-building').value;
       const block = backdrop.querySelector('#cmt-block').value;
       const spaceNum = backdrop.querySelector('#cmt-space-num').value;
+      const dayVal = backdrop.querySelector('#cmt-day').value;
+      const dayCode = dayVal.includes('2') ? 'D2' : 'D1';
+
+      const fullLocation = `${dayCode} ${building} ${block}-${spaceNum}`.trim();
 
       const payload = {
-        day: backdrop.querySelector('#cmt-day').value,
+        day: dayVal,
+        dayCode: dayCode,
         priority: backdrop.querySelector('#cmt-priority').value,
         building: building,
         hall: building,
         block: block,
         spaceNum: spaceNum,
         space: `${building} ${block}-${spaceNum}`.trim(),
+        fullLocation: fullLocation,
+        day1Location: parsedData.day1Location || (dayCode === 'D1' ? fullLocation : ''),
+        day2Location: parsedData.day2Location || (dayCode === 'D2' ? fullLocation : ''),
         circleName: backdrop.querySelector('#cmt-circle').value,
         artist: backdrop.querySelector('#cmt-artist').value,
         price: backdrop.querySelector('#cmt-price').value,
@@ -198,7 +206,7 @@
         });
 
         if (response && response.success) {
-          showToast(`✅ Saved ${payload.building} ${payload.block}-${payload.spaceNum} (${payload.circleName}) to Comiket Plan!`, 'success');
+          showToast(`✅ Saved ${fullLocation} (${payload.circleName}) to Comiket Plan!`, 'success');
           closeModal();
         } else {
           showToast(`⚠️ ${response?.error || 'Failed to save.'}`, 'error');
@@ -284,7 +292,8 @@
 
         const badgeSpan = document.createElement('span');
         badgeSpan.className = 'badge-tag';
-        badgeSpan.textContent = `${parsed.day}: ${parsed.building || parsed.hall} ${parsed.block}-${parsed.spaceNum || parsed.space}`;
+        const displayLoc = parsed.fullLocation || `${parsed.dayCode || 'D1'} ${parsed.building || parsed.hall} ${parsed.block}-${parsed.spaceNum || parsed.space}`;
+        badgeSpan.textContent = displayLoc;
 
         btn.replaceChildren(iconSpan, labelSpan, badgeSpan);
 
