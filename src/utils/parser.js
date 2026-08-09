@@ -176,6 +176,16 @@
       }
     }
 
+    if (!circleName && rawText.includes('@')) {
+      const atCircleMatch = rawText.match(/@([^\s\n\r@#「」『』/]+?)(?:1日目|一日目|2日目|二日目|土曜|日曜|8\/15|8\/16|[東西南]|C108|$)/i);
+      if (atCircleMatch && atCircleMatch[1]) {
+        const candidate = atCircleMatch[1].trim();
+        if (candidate.length >= 2 && !candidate.match(/^[A-Za-z0-9_]{3,15}$/) && !candidate.match(/^(?:情報|配置|参加|1日目|2日目|一日目|二日目|土曜|日曜|C108)/i)) {
+          circleName = candidate;
+        }
+      }
+    }
+
     if (!circleName) {
       circleName = artistName || artistHandle.replace(/^@/, '') || 'Unknown Circle';
     }
