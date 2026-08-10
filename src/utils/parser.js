@@ -5,12 +5,12 @@
 
 (function (global) {
   // Primary Location Regex (With explicit building direction Kanji [東西南] or English [East|West|South|[EWS]])
-  const COMIKET_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)?\s*(?:([東西南])\s*([1-8１-８])?|\b(East|West|South|[EWS])\b\s*([1-8])?)\s*(?:ホール|Hall)?\s*[-ー―‐/]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
+  const COMIKET_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)?\s*(?:([東西南])\s*([1-8１-８])?|\b(East|West|South|[EWS])\b\s*([1-8])?)\s*(?:ホール|Hall)?\s*([1-8１-８])?\s*[-ー―‐/]?\s*["'「『]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*["'」』]?\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
 
-  const GLOBAL_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)?\s*(?:([東西南])\s*([1-8１-８])?|\b(East|West|South|[EWS])\b\s*([1-8])?)\s*(?:ホール|Hall)?\s*[-ー―‐/]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/gi;
+  const GLOBAL_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)?\s*(?:([東西南])\s*([1-8１-８])?|\b(East|West|South|[EWS])\b\s*([1-8])?)\s*(?:ホール|Hall)?\s*([1-8１-８])?\s*[-ー―‐/]?\s*["'「『]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*["'」』]?\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/gi;
 
   // Fallback Location Regex (Day + Block + Space Number without explicit building direction, e.g. 土曜日ス-20ab)
-  const DAY_BLOCK_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)\s*[-ー―‐/]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
+  const DAY_BLOCK_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)\s*[-ー―‐/]?\s*["'「『]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*["'」』]?\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
 
   const EXPLICIT_PRICE_REGEX = /(?:¥|￥|価格[:：]?\s*)([1-9][0-9]{2,4})|([1-9][0-9]{2,4})\s*(?:円|yen|Yen|YEN)/i;
 
@@ -79,10 +79,10 @@
 
     if (matches.length > 0) {
       for (const match of matches) {
-        const [matchStr, dayRaw, hallKanjiRaw, hallKanjiNumRaw, hallEngRaw, hallEngNumRaw, blockRaw, numRaw, posRaw] = match;
+        const [matchStr, dayRaw, hallKanjiRaw, hallKanjiNumRaw, hallEngRaw, hallEngNumRaw, extraHallNumRaw, blockRaw, numRaw, posRaw] = match;
         if (!blockRaw || !numRaw) continue;
 
-        const target = buildTargetObject(normalizedText, text, matchStr, dayRaw, hallKanjiRaw, hallKanjiNumRaw, hallEngRaw, hallEngNumRaw, blockRaw, numRaw, posRaw, options);
+        const target = buildTargetObject(normalizedText, text, matchStr, dayRaw, hallKanjiRaw, hallKanjiNumRaw, hallEngRaw, hallEngNumRaw || extraHallNumRaw, blockRaw, numRaw, posRaw, options);
         if (target) {
           const uniqueKey = `${target.day}:${target.space}`;
           if (!seenSpaces.has(uniqueKey)) {
@@ -106,15 +106,22 @@
       }
     }
 
-    // Cross-link Day 1 & Day 2 locations if both are present in the same post
+    // Unify multi-day targets into a single consolidated record if both Day 1 & Day 2 are present
     if (results.length >= 2) {
       const d1Item = results.find(r => r.dayCode === 'D1');
       const d2Item = results.find(r => r.dayCode === 'D2');
       if (d1Item && d2Item) {
-        results.forEach(r => {
-          r.day1Location = d1Item.fullLocation;
-          r.day2Location = d2Item.fullLocation;
-        });
+        const unified = {
+          ...d1Item,
+          isMultiDay: true,
+          day1Location: d1Item.fullLocation,
+          day2Location: d2Item.fullLocation,
+          fullLocation: `${d1Item.fullLocation} / ${d2Item.fullLocation}`,
+          day2Building: d2Item.building,
+          day2Block: d2Item.block,
+          day2SpaceNum: d2Item.spaceNum
+        };
+        return [unified];
       }
     }
 

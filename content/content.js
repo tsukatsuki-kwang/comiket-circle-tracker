@@ -1,6 +1,6 @@
 /**
  * Comiket Circle Tracker Sync - Content Script for X (Twitter)
- * Scans tweet cards, author display names, images, and post detail views with real-time duplication tracking.
+ * Scans tweet cards, author display names, images, and post detail views with real-time duplication tracking & multi-day consolidation.
  */
 
 (function () {
@@ -9,7 +9,7 @@
   if (window.__comiketTrackerInjected) return;
   window.__comiketTrackerInjected = true;
 
-  console.log('[Comiket Tracker] Content script active with multi-day target extraction & duplication check.');
+  console.log('[Comiket Tracker] Content script active with multi-day target consolidation.');
 
   let savedItemsMap = new Map();
 
@@ -28,6 +28,8 @@
             savedItemsMap.set(`${dayCode}:${space}:${artist}`, it);
           }
         }
+        if (it.day1Location) savedItemsMap.set(it.day1Location.toLowerCase().trim(), it);
+        if (it.day2Location) savedItemsMap.set(it.day2Location.toLowerCase().trim(), it);
       });
       updateExistingButtonsInDOM();
     } catch (e) {
@@ -76,6 +78,9 @@
 
   function isItemTracked(parsed) {
     if (!parsed) return false;
+    if (parsed.day1Location && savedItemsMap.has(parsed.day1Location.toLowerCase().trim())) return true;
+    if (parsed.day2Location && savedItemsMap.has(parsed.day2Location.toLowerCase().trim())) return true;
+
     const dayCode = parsed.dayCode || (parsed.day && parsed.day.includes('2') ? 'D2' : 'D1');
     const space = (parsed.spaceNum || parsed.space || '').toLowerCase().trim();
     const artist = (parsed.artist || parsed.circleName || '').toLowerCase().trim();
@@ -117,8 +122,8 @@
     const isTracked = isItemTracked(parsedData);
 
     const settings = await extAPI.storage.get(['showImagePreview', 'includeDescription', 'defaultPriority']);
-    const showImagePreview = settings.showImagePreview === true; // Default false
-    const includeDescription = settings.includeDescription !== false; // Default true
+    const showImagePreview = settings.showImagePreview === true;
+    const includeDescription = settings.includeDescription !== false;
 
     let selectedPriority = parsedData.priority || 'P2 (Medium)';
     if (!parsedData.priority && settings.defaultPriority && (settings.defaultPriority.startsWith('P0') || settings.defaultPriority.startsWith('P1') || settings.defaultPriority.startsWith('P3'))) {
@@ -162,11 +167,12 @@
 
           <div class="comiket-field-row">
             <div class="comiket-field-group">
-              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Target Day', '配置日程'))}</label>
-              <select class="comiket-select" id="cmt-day">
-                <option value="Day 1" ${parsedData.day === 'Day 1' ? 'selected' : ''}>${escapeHtml(extAPI.getBilingualText('Day 1 (Aug 15)', '1日目 (8/15)'))}</option>
-                <option value="Day 2" ${parsedData.day === 'Day 2' ? 'selected' : ''}>${escapeHtml(extAPI.getBilingualText('Day 2 (Aug 16)', '2日目 (8/16)'))}</option>
-              </select>
+              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Day 1 Position', '1日目 配置'))}</label>
+              <input type="text" class="comiket-input" id="cmt-day1-loc" value="${escapeHtml(parsedData.day1Location || (parsedData.dayCode === 'D1' ? parsedData.fullLocation : ''))}" placeholder="D1 東123 カ-11a">
+            </div>
+            <div class="comiket-field-group">
+              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Day 2 Position', '2日目 配置'))}</label>
+              <input type="text" class="comiket-input" id="cmt-day2-loc" value="${escapeHtml(parsedData.day2Location || (parsedData.dayCode === 'D2' ? parsedData.fullLocation : ''))}" placeholder="D2 西12 あ-45ab (Optional)">
             </div>
             <div class="comiket-field-group">
               <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Priority', '優先度'))}</label>
@@ -176,21 +182,6 @@
                 <option value="P2 (Medium)" ${selectedPriority.includes('P2') ? 'selected' : ''}>${escapeHtml(extAPI.getBilingualText('P2 (Medium / Island)', 'P2 (一般 / 島サークル)'))}</option>
                 <option value="P3 (Low)" ${selectedPriority.includes('P3') ? 'selected' : ''}>${escapeHtml(extAPI.getBilingualText('P3 (Low / Backup)', 'P3 (予備 / 後回し)'))}</option>
               </select>
-            </div>
-          </div>
-
-          <div class="comiket-field-row three-cols">
-            <div class="comiket-field-group">
-              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Building Group', '館グループ'))}</label>
-              <input type="text" class="comiket-input" id="cmt-building" value="${escapeHtml(parsedData.building || parsedData.hall || '')}" placeholder="東123/西12/南12">
-            </div>
-            <div class="comiket-field-group">
-              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Block', 'ブロック'))}</label>
-              <input type="text" class="comiket-input" id="cmt-block" value="${escapeHtml(parsedData.block || '')}" placeholder="ウ/A/め">
-            </div>
-            <div class="comiket-field-group">
-              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Space', 'スペース'))}</label>
-              <input type="text" class="comiket-input" id="cmt-space-num" value="${escapeHtml(parsedData.spaceNum || parsedData.space || '')}" placeholder="11a">
             </div>
           </div>
 
@@ -253,26 +244,25 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Saving...';
 
-      const building = backdrop.querySelector('#cmt-building').value;
-      const block = backdrop.querySelector('#cmt-block').value;
-      const spaceNum = backdrop.querySelector('#cmt-space-num').value;
-      const dayVal = backdrop.querySelector('#cmt-day').value;
-      const dayCode = dayVal.includes('2') ? 'D2' : 'D1';
+      const d1LocVal = backdrop.querySelector('#cmt-day1-loc').value.trim();
+      const d2LocVal = backdrop.querySelector('#cmt-day2-loc').value.trim();
 
-      const fullLocation = `${dayCode} ${building} ${block ? block + '-' : ''}${spaceNum}`.trim();
+      const dayVal = d1LocVal ? 'Day 1' : 'Day 2';
+      const dayCode = d1LocVal ? 'D1' : 'D2';
+      const activeLoc = d1LocVal || d2LocVal || 'D1 東123 未定';
 
       const payload = {
         day: dayVal,
         dayCode: dayCode,
         priority: backdrop.querySelector('#cmt-priority').value,
-        building: building,
-        hall: building,
-        block: block,
-        spaceNum: spaceNum,
-        space: `${building} ${block ? block + '-' : ''}${spaceNum}`.trim(),
-        fullLocation: fullLocation,
-        day1Location: parsedData.day1Location || (dayCode === 'D1' ? fullLocation : ''),
-        day2Location: parsedData.day2Location || (dayCode === 'D2' ? fullLocation : ''),
+        building: parsedData.building || '東123',
+        hall: parsedData.building || '東123',
+        block: parsedData.block || '',
+        spaceNum: parsedData.spaceNum || '',
+        space: parsedData.space || '',
+        fullLocation: activeLoc,
+        day1Location: d1LocVal,
+        day2Location: d2LocVal,
         circleName: backdrop.querySelector('#cmt-circle').value,
         artist: backdrop.querySelector('#cmt-artist').value,
         price: backdrop.querySelector('#cmt-price').value,
@@ -293,7 +283,7 @@
 
         if (response && response.success) {
           const actionWord = response.isUpdate ? 'Updated' : 'Saved';
-          showToast(`✅ ${actionWord} ${fullLocation} (${payload.circleName}) in Comiket Plan!`, 'success');
+          showToast(`✅ ${actionWord} ${payload.circleName} in Comiket Plan!`, 'success');
           await refreshSavedItems();
           closeModal();
         } else {
@@ -391,8 +381,7 @@
 
         const badgeSpan = document.createElement('span');
         badgeSpan.className = 'badge-tag';
-        const displayLoc = parsed.fullLocation || `${parsed.dayCode || 'D1'} ${parsed.building || parsed.hall} ${parsed.block}-${parsed.spaceNum || parsed.space}`;
-        badgeSpan.textContent = displayLoc;
+        badgeSpan.textContent = parsed.fullLocation;
 
         btn.replaceChildren(iconSpan, labelSpan, badgeSpan);
 
