@@ -76,18 +76,26 @@
     });
   }
 
-  function isItemTracked(parsed) {
-    if (!parsed) return false;
-    if (parsed.day1Location && savedItemsMap.has(parsed.day1Location.toLowerCase().trim())) return true;
-    if (parsed.day2Location && savedItemsMap.has(parsed.day2Location.toLowerCase().trim())) return true;
+  function getSavedItem(parsed) {
+    if (!parsed) return null;
+    if (parsed.day1Location && savedItemsMap.has(parsed.day1Location.toLowerCase().trim())) {
+      return savedItemsMap.get(parsed.day1Location.toLowerCase().trim());
+    }
+    if (parsed.day2Location && savedItemsMap.has(parsed.day2Location.toLowerCase().trim())) {
+      return savedItemsMap.get(parsed.day2Location.toLowerCase().trim());
+    }
 
     const dayCode = parsed.dayCode || (parsed.day && parsed.day.includes('2') ? 'D2' : 'D1');
     const space = (parsed.spaceNum || parsed.space || '').toLowerCase().trim();
     const artist = (parsed.artist || parsed.circleName || '').toLowerCase().trim();
 
-    if (savedItemsMap.has(`${dayCode}:${space}:${artist}`)) return true;
-    if (savedItemsMap.has(`${dayCode}:${space}`)) return true;
-    return false;
+    if (savedItemsMap.has(`${dayCode}:${space}:${artist}`)) return savedItemsMap.get(`${dayCode}:${space}:${artist}`);
+    if (savedItemsMap.has(`${dayCode}:${space}`)) return savedItemsMap.get(`${dayCode}:${space}`);
+    return null;
+  }
+
+  function isItemTracked(parsed) {
+    return getSavedItem(parsed) !== null;
   }
 
   function setSafeHTML(element, htmlString) {
@@ -110,7 +118,7 @@
     }, 3500);
   }
 
-  async function openPreviewModal(parsedData) {
+  async function openPreviewModal(rawParsedData) {
     if (!extAPI.isContextValid()) {
       showToast('⚠️ Extension updated. Please refresh page (F5).', 'error');
       return;
@@ -119,7 +127,9 @@
     const existingModal = document.querySelector('.comiket-modal-backdrop');
     if (existingModal) existingModal.remove();
 
-    const isTracked = isItemTracked(parsedData);
+    const trackedItem = getSavedItem(rawParsedData);
+    const isTracked = trackedItem !== null;
+    const parsedData = isTracked ? { ...rawParsedData, ...trackedItem } : rawParsedData;
 
     const settings = await extAPI.storage.get(['showImagePreview', 'includeDescription', 'defaultPriority']);
     const showImagePreview = settings.showImagePreview === true;
