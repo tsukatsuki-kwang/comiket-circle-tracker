@@ -36,11 +36,6 @@
     "https://*.melonbooks.co.jp/*"
   ],
   "background": {
-    "scripts": [
-      "src/utils/browser-poly.js",
-      "src/utils/exporter.js",
-      "background/service-worker.js"
-    ],
     "service_worker": "background/service-worker.js"
   },
   "browser_specific_settings": {
