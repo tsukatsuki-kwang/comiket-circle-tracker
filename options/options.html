@@ -3,98 +3,77 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Comiket Circle Tracker Settings</title>
+  <title>Comiket Circle Tracker - Options</title>
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
   <div class="options-container">
-    <!-- Header -->
     <div class="header">
-      <div class="header-icon">⛩️</div>
-      <div>
-        <div class="header-title">Comiket Circle Tracker Settings</div>
-        <div class="header-sub">Configure display preferences and Google Sheet sync</div>
-      </div>
+      <div class="title">⛩️ Comiket Circle Tracker Settings</div>
+      <div class="subtitle">Configure Google Sheet integration, i18n priorities, and display preferences</div>
     </div>
 
-    <!-- Section 1: Google Sheet Link -->
+    <!-- Section 1: Cloud & Google Sheet Sync Settings -->
     <div class="card">
-      <div class="card-title">
-        <span>📊</span> Master Google Sheet Link
-      </div>
-      <div style="font-size: 12.5px; color: #94a3b8;">
-        Paste your Google Sheet URL here to quickly open it anytime from the extension popup.
+      <div class="card-title">☁️ Google Sheet Cloud Integration</div>
+      <div class="card-desc">Connect your Google Sheet or Google Apps Script Web App for real-time 1-click sync from X (Twitter).</div>
+
+      <div class="form-group">
+        <label class="label">Google Sheet Web App Sync URL (Optional)</label>
+        <input type="url" class="input-text" id="opt-url" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec">
+        <div class="help-text">Deploy Google Apps Script Web App in your Google Sheet and paste the Web App URL here.</div>
       </div>
 
       <div class="form-group">
-        <label class="label">Google Sheet URL</label>
-        <div style="display: flex; gap: 8px;">
-          <input type="url" class="input-text" id="opt-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/1s-YYU43O4dypXbYI3q5X97IkHhtPxPunSJ1qQLiZrIE/edit">
-          <button class="btn btn-secondary" id="btn-open-sheet">📊 Open Sheet</button>
-        </div>
+        <label class="label">Target Google Sheet URL (Optional)</label>
+        <input type="url" class="input-text" id="opt-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit">
+        <div class="help-text">Direct URL of your Comiket Master Sheet to open directly from the extension footer.</div>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <button class="btn-primary" id="btn-open-sheet" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+          <span>📊</span> Open Master Sheet
+        </button>
       </div>
     </div>
 
-    <!-- Section 2: Display & Content Preferences -->
+    <!-- Section 2: Circle Tracking Defaults -->
     <div class="card">
-      <div class="card-title">
-        <span>🎨</span> Display & Content Preferences
-      </div>
+      <div class="card-title">🎯 Circle Tracking Defaults</div>
 
-      <div class="form-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
-        <div>
-          <div style="font-weight: 700; color: #fff;">Include Tweet Content / Post Description</div>
-          <div style="font-size: 11px; color: #94a3b8;">Save full post text into tracked items & spreadsheet exports. Uncheck to keep spreadsheets compact (Enabled by default).</div>
-        </div>
-        <input type="checkbox" id="opt-include-desc" style="width: 20px; height: 20px; cursor: pointer;">
-      </div>
-
-      <div class="form-group" style="flex-direction: row; align-items: center; justify-content: space-between; margin-top: 10px;">
-        <div>
-          <div style="font-weight: 700; color: #fff;">Enable Sample Artwork Preview in Modals</div>
-          <div style="font-size: 11px; color: #94a3b8;">Show sample image thumbnail previews inside tracking popups (Disabled by default).</div>
-        </div>
-        <input type="checkbox" id="opt-show-img" style="width: 20px; height: 20px; cursor: pointer;">
-      </div>
-
-      <div class="form-group" style="margin-top: 10px;">
-        <label class="label">Default Priority Level</label>
-        <select class="select-input" id="opt-priority">
-          <option value="P0 (Top)">P0 (Top Priority - Must Have / Major Wall Circles)</option>
-          <option value="P1 (High)">P1 (High - Wall Circles & Major Authors)</option>
-          <option value="P2 (Medium)" selected>P2 (Medium - Island Circles)</option>
-          <option value="P3 (Low)">P3 (Low - Optional / Backup)</option>
+      <div class="form-group">
+        <label class="label">Default Circle Priority</label>
+        <select class="select" id="opt-priority">
+          <option value="P0 (Top)">P0 (Top Priority / Wall Circle)</option>
+          <option value="P1 (High)">P1 (High Priority / Wall Circle)</option>
+          <option value="P2 (Medium)" selected>P2 (Medium Priority / Island Circle)</option>
+          <option value="P3 (Low)">P3 (Low Priority / Backup)</option>
         </select>
       </div>
 
       <div class="form-group">
-        <label class="label">Default Day Fallback</label>
-        <select class="select-input" id="opt-day">
-          <option value="Day 1">Day 1 (Saturday, August 15)</option>
-          <option value="Day 2">Day 2 (Sunday, August 16)</option>
+        <label class="label">Default Event Day</label>
+        <select class="select" id="opt-day">
+          <option value="Day 1" selected>Day 1 (Aug 15)</option>
+          <option value="Day 2">Day 2 (Aug 16)</option>
         </select>
       </div>
 
-      <div class="btn-group">
-        <button class="btn btn-primary" id="btn-save">💾 Save Settings</button>
+      <div class="checkbox-group">
+        <input type="checkbox" id="opt-show-img">
+        <label for="opt-show-img">Show Artwork Image Preview in Add/Edit Modal (Requires external Twitter image loading)</label>
       </div>
 
+      <div class="checkbox-group">
+        <input type="checkbox" id="opt-include-desc" checked>
+        <label for="opt-include-desc">Include Post Text & Description in exports and modal preview</label>
+      </div>
+    </div>
+
+    <!-- Save Button -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 20px;">
       <div class="status-msg" id="status-msg"></div>
-    </div>
-
-    <!-- Section 3: Automatic Cloud Sync (Apps Script Web App) -->
-    <div class="card">
-      <div class="card-title">
-        <span>⚡</span> Optional Google Apps Script Web App Sync
-      </div>
-      <div style="font-size: 12.5px; color: #94a3b8;">
-        If you want instant automatic cloud appending without needing to copy/paste, deploy the Apps Script code from <code style="color: #f59e0b;">Code.gs</code> to your Sheet and paste the Web App URL below.
-      </div>
-
-      <div class="form-group">
-        <label class="label">Apps Script Web App URL (Optional)</label>
-        <input type="url" class="input-text" id="opt-url" placeholder="https://script.google.com/macros/s/.../exec">
-      </div>
+      <button class="btn-primary" id="btn-save">💾 Save Settings</button>
     </div>
   </div>
 
