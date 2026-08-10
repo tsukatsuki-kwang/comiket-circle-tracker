@@ -68,7 +68,7 @@ async function handleGoogleAccountConnect() {
           },
           body: JSON.stringify({
             properties: {
-              title: 'Comiket 108 Strategy Plan'
+              title: 'Comiket 108 Master Sheet'
             },
             sheets: [
               {
@@ -88,7 +88,7 @@ async function handleGoogleAccountConnect() {
         const spreadsheetId = sheetData.spreadsheetId;
         const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
 
-        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Circle Targets!A1:N1?valueInputOption=USER_ENTERED`, {
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Circle Targets!A1:K1?valueInputOption=USER_ENTERED`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -96,7 +96,7 @@ async function handleGoogleAccountConnect() {
           },
           body: JSON.stringify({
             values: [
-              ['Day', 'Priority', 'Building', 'Block', 'Space', 'Circle Name', 'Artist / Author', 'Sample Image', 'Item Description', 'Price (JPY)', 'Tweet Link', 'Shop Link', 'Notes', 'Added At']
+              ['Circle', 'Product', 'Day 1 Position', 'Day 2 Position', 'Priority', 'Price (¥)', 'Sample Image', 'Tweet Link', 'Web Purchase', 'Status', 'Note']
             ]
           })
         });
@@ -126,8 +126,9 @@ async function handleSaveCircle(circleData) {
     'dedicatedSheetId'
   ]);
 
-  // 1. Save locally
-  const existingIdx = circleItems.findIndex((item) => item.space === circleData.space);
+  // 1. Save locally with day:space unique key
+  const uniqueKey = `${circleData.day}:${circleData.space}`;
+  const existingIdx = circleItems.findIndex((item) => `${item.day}:${item.space}` === uniqueKey);
   let updatedItems = [...circleItems];
 
   if (existingIdx >= 0) {
@@ -140,6 +141,15 @@ async function handleSaveCircle(circleData) {
 
   let syncNote = 'Saved locally to your Comiket Plan list.';
 
+  const dayCode = circleData.dayCode || (circleData.day && circleData.day.includes('2') ? 'D2' : 'D1');
+  const building = circleData.building || circleData.hall || '東123';
+  const block = circleData.block || '';
+  const space = circleData.spaceNum || circleData.space || '';
+  const fullLoc = circleData.fullLocation || `${dayCode} ${building} ${block ? block + '-' : ''}${space}`.trim();
+
+  const day1Loc = circleData.day1Location || (dayCode === 'D1' ? fullLoc : '');
+  const day2Loc = circleData.day2Location || (dayCode === 'D2' ? fullLoc : '');
+
   // 2. Direct Google Sheets API v4 Sync if token is active
   if (googleAuthToken && dedicatedSheetId) {
     try {
@@ -147,7 +157,7 @@ async function handleSaveCircle(circleData) {
       const tweetFormula = circleData.sourceUrl ? `=HYPERLINK("${circleData.sourceUrl}", "View Tweet")` : '';
       const shopFormula = circleData.shopUrl ? `=HYPERLINK("${circleData.shopUrl}", "Shop / Order")` : '';
 
-      const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${dedicatedSheetId}/values/Circle Targets!A:N:append?valueInputOption=USER_ENTERED`, {
+      const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${dedicatedSheetId}/values/Circle Targets!A:K:append?valueInputOption=USER_ENTERED`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${googleAuthToken}`,
@@ -156,20 +166,17 @@ async function handleSaveCircle(circleData) {
         body: JSON.stringify({
           values: [
             [
-              circleData.day || 'Day 1',
+              circleData.circleName || 'Unknown Circle',
+              circleData.description || circleData.product || '',
+              day1Loc,
+              day2Loc,
               circleData.priority || 'P2 (Medium)',
-              circleData.building || circleData.hall || '',
-              circleData.block || '',
-              circleData.spaceNum || circleData.space || '',
-              circleData.circleName || '',
-              circleData.artist || '',
-              imageFormula,
-              circleData.description || '',
               circleData.price ? Number(circleData.price) : '',
+              imageFormula,
               tweetFormula || circleData.sourceUrl || '',
               shopFormula || circleData.shopUrl || '',
-              circleData.notes || 'Imported via Extension',
-              new Date().toISOString()
+              circleData.status || 'Pending',
+              circleData.notes || 'Imported via Extension'
             ]
           ]
         })

@@ -324,6 +324,16 @@
     articles.forEach(processTweet);
   }
 
+  let scanScheduled = false;
+  function scanFeedDebounced() {
+    if (scanScheduled) return;
+    scanScheduled = true;
+    requestAnimationFrame(() => {
+      scanFeed();
+      scanScheduled = false;
+    });
+  }
+
   scanFeed();
 
   const observer = new MutationObserver((mutations) => {
@@ -338,7 +348,7 @@
         break;
       }
     }
-    if (shouldScan) scanFeed();
+    if (shouldScan) scanFeedDebounced();
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
