@@ -1,6 +1,6 @@
 /**
  * Comiket Circle Tracker Sync - Background Service Worker (Manifest V3)
- * Handles local storage, Google Sheets API OAuth sync, and export actions.
+ * Handles local storage, Google Sheets API OAuth sync, and export/import actions.
  */
 
 importScripts('../src/utils/browser-poly.js');
@@ -11,6 +11,13 @@ console.log('[Comiket Tracker] Service worker registered.');
 extAPI.raw.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'SAVE_CIRCLE') {
     handleSaveCircle(message.data)
+      .then((res) => sendResponse(res))
+      .catch((err) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.action === 'IMPORT_CIRCLES') {
+    handleImportCircles(message.items)
       .then((res) => sendResponse(res))
       .catch((err) => sendResponse({ success: false, error: err.message }));
     return true;
@@ -232,4 +239,57 @@ async function handleSaveCircle(circleData) {
   }
 
   return { success: true, count: updatedItems.length, isUpdate: isUpdate, syncNote: syncNote };
+}
+
+/**
+ * Imports an array of circle target items from Google Sheet into local storage.
+ */
+async function handleImportCircles(itemsToImport) {
+  if (!Array.isArray(itemsToImport) || itemsToImport.length === 0) {
+    return { success: false, error: 'No valid items to import.' };
+  }
+
+  const { circleItems = [] } = await extAPI.storage.get(['circleItems']);
+  let updatedItems = [...circleItems];
+  let newCount = 0;
+  let updateCount = 0;
+
+  for (const item of itemsToImport) {
+    const targetArtist = normalizeStr(item.artist || item.circleName);
+    const targetD1 = normalizeStr(item.day1Location);
+    const targetD2 = normalizeStr(item.day2Location);
+    const targetDay = item.dayCode || (item.day && item.day.includes('2') ? 'D2' : 'D1');
+    const targetLoc = normalizeStr(item.fullLocation || item.space);
+
+    const existingIdx = updatedItems.findIndex((savedItem) => {
+      const savedArtist = normalizeStr(savedItem.artist || savedItem.circleName);
+      if (!savedArtist || !targetArtist) return false;
+
+      const artistMatches = savedArtist === targetArtist || savedArtist.includes(targetArtist) || targetArtist.includes(savedArtist);
+      if (!artistMatches) return false;
+
+      const savedD1 = normalizeStr(savedItem.day1Location);
+      const savedD2 = normalizeStr(savedItem.day2Location);
+
+      if (targetD1 && targetD2 && savedD1 && savedD2) {
+        return savedD1 === targetD1 && savedD2 === targetD2;
+      }
+
+      const savedDay = savedItem.dayCode || (savedItem.day && savedItem.day.includes('2') ? 'D2' : 'D1');
+      const savedLoc = normalizeStr(savedItem.fullLocation || savedItem.space);
+
+      return savedDay === targetDay && savedLoc === targetLoc;
+    });
+
+    if (existingIdx >= 0) {
+      updatedItems[existingIdx] = { ...updatedItems[existingIdx], ...item };
+      updateCount++;
+    } else {
+      updatedItems.unshift(item);
+      newCount++;
+    }
+  }
+
+  await extAPI.storage.set({ circleItems: updatedItems });
+  return { success: true, total: updatedItems.length, newCount, updateCount };
 }

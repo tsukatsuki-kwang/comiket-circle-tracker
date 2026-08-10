@@ -63,7 +63,7 @@
       </div>
     </div>
 
-    <!-- Tab 3: Saved Circles & Budget Export -->
+    <!-- Tab 3: Saved Circles & Budget Export/Import -->
     <div class="tab-content" id="stats-tab">
       <div class="stat-grid">
         <div class="stat-box">
@@ -83,20 +83,24 @@
         </div>
       </div>
 
-      <!-- Export Buttons -->
+      <!-- Export & Import Buttons -->
       <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
-        <button class="btn-primary" id="btn-export-csv">
-          <span>📥</span> <span data-i18n="btnExportCSV">Export CSV for Google Sheets</span>
+        <button class="btn-primary" id="btn-open-import" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">
+          <span>📥</span> <span>Import Table from Google Sheet</span>
         </button>
         <button class="btn-primary" id="btn-copy-tsv" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
           <span>📋</span> <span data-i18n="btnCopyTSV">Copy Table for Google Sheets (Ctrl+V)</span>
         </button>
+
         <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary" id="btn-export-csv" style="flex: 1;">
+            <span>📥</span> <span data-i18n="btnExportCSV">Export CSV</span>
+          </button>
           <button class="btn-secondary" id="btn-export-json" style="flex: 1;">
             <span>📄</span> <span data-i18n="btnJSONBackup">JSON Backup</span>
           </button>
           <button class="btn-secondary" id="btn-clear-items" style="color: #ef4444;">
-            <span>🗑️</span> <span data-i18n="btnClearList">Clear List</span>
+            <span>🗑️</span> <span data-i18n="btnClearList">Clear</span>
           </button>
         </div>
       </div>
@@ -109,6 +113,24 @@
       </div>
       <div class="footer-link" id="link-sheet" style="color: #10b981;">
         <span>📊</span> <span data-i18n="btnOpenMasterSheet">Open Master Sheet</span>
+      </div>
+    </div>
+
+    <!-- Import Sheet Data Modal -->
+    <div id="import-modal-backdrop" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.85); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center;">
+      <div class="card" style="width: 90%; max-width: 360px; border: 1px solid #334155; background: #1e293b; color: #fff;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div style="font-weight: 700; font-size: 14px;">📥 Import from Google Sheet</div>
+          <button id="btn-close-import" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;">&times;</button>
+        </div>
+        <div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">
+          Copy rows from your Google Sheet (Ctrl+C) and paste (Ctrl+V) them below:
+        </div>
+        <textarea id="import-text" class="input-text" style="height: 110px; font-family: monospace; font-size: 11px;" placeholder="Circle&#9;Product&#9;Day 1 Position&#9;Day 2 Position&#9;Priority..."></textarea>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button class="btn-secondary" id="btn-cancel-import" style="flex: 1;">Cancel</button>
+          <button class="btn-primary" id="btn-submit-import" style="flex: 1; background: #8b5cf6;">Import & Sync</button>
+        </div>
       </div>
     </div>
   </div>

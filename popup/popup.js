@@ -37,6 +37,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnExportJSON = document.getElementById('btn-export-json');
   const btnClearList = document.getElementById('btn-clear-items');
 
+  const btnOpenImport = document.getElementById('btn-open-import');
+  const importModalBackdrop = document.getElementById('import-modal-backdrop');
+  const btnCloseImport = document.getElementById('btn-close-import');
+  const btnCancelImport = document.getElementById('btn-cancel-import');
+  const btnSubmitImport = document.getElementById('btn-submit-import');
+  const importText = document.getElementById('import-text');
+
   const linkOptions = document.getElementById('link-options');
   const linkSheet = document.getElementById('link-sheet');
 
@@ -223,6 +230,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     statYen.textContent = `¥${totalYen.toLocaleString()}`;
   }
 
+  // 5. Google Sheet Import Modal Logic
+  btnOpenImport.addEventListener('click', () => {
+    importText.value = '';
+    importModalBackdrop.style.display = 'flex';
+  });
+
+  const closeImportModal = () => {
+    importModalBackdrop.style.display = 'none';
+  };
+
+  btnCloseImport.addEventListener('click', closeImportModal);
+  btnCancelImport.addEventListener('click', closeImportModal);
+
+  btnSubmitImport.addEventListener('click', async () => {
+    const rawText = importText.value.trim();
+    if (!rawText) return alert('Please paste copied table cells or CSV text first!');
+
+    btnSubmitImport.disabled = true;
+    btnSubmitImport.textContent = 'Importing...';
+
+    const parsedItems = ComiketExporter.parseTableData(rawText);
+    if (parsedItems.length === 0) {
+      alert('Could not parse any valid circle rows from the pasted text.');
+      btnSubmitImport.disabled = false;
+      btnSubmitImport.textContent = 'Import & Sync';
+      return;
+    }
+
+    const res = await extAPI.runtime.sendMessage({
+      action: 'IMPORT_CIRCLES',
+      items: parsedItems
+    });
+
+    if (res && res.success) {
+      alert(`✅ Successfully imported ${res.newCount} new circle(s) and updated ${res.updateCount} existing record(s)!`);
+      closeImportModal();
+      refreshStats();
+    } else {
+      alert(`⚠️ Import failed: ${res?.error || 'Unknown error'}`);
+    }
+
+    btnSubmitImport.disabled = false;
+    btnSubmitImport.textContent = 'Import & Sync';
+  });
+
   // Exporters
   btnExportCSV.addEventListener('click', async () => {
     const res = await extAPI.runtime.sendMessage({ action: 'GET_ALL_ITEMS' });
@@ -288,6 +340,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const saved = await extAPI.storage.get(['dedicatedSheetUrl']);
     if (saved.dedicatedSheetUrl) {
       extAPI.tabs.create({ url: saved.dedicatedSheetUrl });
+    } else if (extAPI.raw.runtime && extAPI.raw.runtime.openOptionsPage) {
+      extAPI.raw.runtime.openOptionsPage();
     } else {
       extAPI.tabs.create({ url: 'options/options.html' });
     }
