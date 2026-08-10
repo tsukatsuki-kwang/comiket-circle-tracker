@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (res && res.success) {
       manualText.value = '';
       parsedPreview.style.display = 'none';
-      btnManualSync.textContent = '✅ Saved to Comiket Plan!';
+      btnManualSync.textContent = res.isUpdate ? '✅ Updated Circle!' : '✅ Saved to Comiket Plan!';
       setTimeout(() => {
         const iconSpan = document.createElement('span');
         iconSpan.textContent = '💾 ';
@@ -115,6 +115,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     detectedList.replaceChildren();
 
     try {
+      const res = await extAPI.runtime.sendMessage({ action: 'GET_ALL_ITEMS' });
+      const savedItems = res?.items || [];
+
       const [tab] = await extAPI.raw.tabs.query({ active: true, currentWindow: true });
       if (!tab) {
         detectedCount.textContent = 'No active tab detected.';
@@ -159,18 +162,32 @@ document.addEventListener('DOMContentLoaded', async () => {
           infoDiv.appendChild(nameDiv);
           infoDiv.appendChild(locDiv);
 
+          const isAlreadyTracked = savedItems.some((sv) => {
+            const sameDay = (sv.dayCode || sv.day) === (item.dayCode || item.day);
+            const sameSpace = (sv.spaceNum || sv.space || '').toLowerCase() === (item.spaceNum || item.space || '').toLowerCase();
+            return sameDay && sameSpace;
+          });
+
           const addBtn = document.createElement('button');
           addBtn.className = 'btn-secondary cmt-add-btn';
           addBtn.style.padding = '4px 10px';
           addBtn.style.fontSize = '11px';
-          addBtn.textContent = '+ Add';
+          if (isAlreadyTracked) {
+            addBtn.textContent = '✅ Tracked';
+            addBtn.style.borderColor = '#10b981';
+            addBtn.style.color = '#10b981';
+          } else {
+            addBtn.textContent = '+ Add';
+          }
 
           addBtn.addEventListener('click', async () => {
             addBtn.disabled = true;
             addBtn.textContent = 'Saving...';
             const saveRes = await extAPI.runtime.sendMessage({ action: 'SAVE_CIRCLE', data: item });
             if (saveRes && saveRes.success) {
-              addBtn.textContent = '✅ Saved';
+              addBtn.textContent = saveRes.isUpdate ? '✅ Updated' : '✅ Saved';
+              addBtn.style.borderColor = '#10b981';
+              addBtn.style.color = '#10b981';
             } else {
               addBtn.textContent = 'Failed';
             }

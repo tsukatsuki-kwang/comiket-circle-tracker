@@ -1,6 +1,6 @@
 /**
  * Comiket Circle Tracker Sync - Content Script for X (Twitter)
- * Scans tweet cards, author display names, images, and post detail views.
+ * Scans tweet cards, author display names, images, and post detail views with real-time duplication tracking.
  */
 
 (function () {
@@ -9,7 +9,55 @@
   if (window.__comiketTrackerInjected) return;
   window.__comiketTrackerInjected = true;
 
-  console.log('[Comiket Tracker] Content script active with multi-day target extraction.');
+  console.log('[Comiket Tracker] Content script active with multi-day target extraction & duplication check.');
+
+  let savedItemsMap = new Map();
+
+  async function refreshSavedItems() {
+    try {
+      const res = await extAPI.storage.get(['circleItems']);
+      const items = res?.circleItems || [];
+      savedItemsMap.clear();
+      items.forEach(it => {
+        const dayCode = it.dayCode || (it.day && it.day.includes('2') ? 'D2' : 'D1');
+        const space = (it.spaceNum || it.space || '').toLowerCase().trim();
+        const artist = (it.artist || it.circleName || '').toLowerCase().trim();
+        if (dayCode && space) {
+          savedItemsMap.set(`${dayCode}:${space}`, it);
+          if (artist) {
+            savedItemsMap.set(`${dayCode}:${space}:${artist}`, it);
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('[Comiket Tracker] Failed to refresh saved items:', e);
+    }
+  }
+
+  refreshSavedItems();
+
+  if (extAPI.raw.storage && extAPI.raw.storage.onChanged) {
+    extAPI.raw.storage.onChanged.addListener((changes) => {
+      if (changes.circleItems) {
+        refreshSavedItems().then(() => {
+          document.querySelectorAll('article[data-comiket-processed="true"]').forEach((art) => {
+            art.removeAttribute('data-comiket-processed');
+          });
+          scanFeedDebounced();
+        });
+      }
+    });
+  }
+
+  function isItemTracked(parsed) {
+    const dayCode = parsed.dayCode || (parsed.day && parsed.day.includes('2') ? 'D2' : 'D1');
+    const space = (parsed.spaceNum || parsed.space || '').toLowerCase().trim();
+    const artist = (parsed.artist || parsed.circleName || '').toLowerCase().trim();
+
+    if (savedItemsMap.has(`${dayCode}:${space}:${artist}`)) return true;
+    if (savedItemsMap.has(`${dayCode}:${space}`)) return true;
+    return false;
+  }
 
   function setSafeHTML(element, htmlString) {
     const parser = new DOMParser();
@@ -40,12 +88,14 @@
     const existingModal = document.querySelector('.comiket-modal-backdrop');
     if (existingModal) existingModal.remove();
 
+    const isTracked = isItemTracked(parsedData);
+
     const settings = await extAPI.storage.get(['showImagePreview', 'includeDescription', 'defaultPriority']);
     const showImagePreview = settings.showImagePreview === true; // Default false
     const includeDescription = settings.includeDescription !== false; // Default true
 
-    let selectedPriority = 'P2 (Medium)';
-    if (settings.defaultPriority && (settings.defaultPriority.startsWith('P0') || settings.defaultPriority.startsWith('P1') || settings.defaultPriority.startsWith('P3'))) {
+    let selectedPriority = parsedData.priority || 'P2 (Medium)';
+    if (!parsedData.priority && settings.defaultPriority && (settings.defaultPriority.startsWith('P0') || settings.defaultPriority.startsWith('P1') || settings.defaultPriority.startsWith('P3'))) {
       selectedPriority = settings.defaultPriority;
     }
 
@@ -65,11 +115,19 @@
       </div>
     ` : '';
 
+    const modalTitleText = isTracked 
+      ? extAPI.getBilingualText('Update Comiket Circle Target', 'コミケ作戦シートの配置を更新')
+      : extAPI.getBilingualText('Add to Comiket Master Sheet', 'コミケ作戦シートに追加');
+
+    const submitBtnText = isTracked 
+      ? `💾 ${escapeHtml(extAPI.getBilingualText('Update Circle', '作戦シートを更新'))}`
+      : `💾 ${escapeHtml(extAPI.getBilingualText('Save Circle', '作戦シートに保存'))}`;
+
     const modalHtml = `
       <div class="comiket-modal-card">
         <div class="comiket-modal-header">
           <div class="comiket-modal-title">
-            <span style="color: #f59e0b;">⛩️</span> ${escapeHtml(extAPI.getBilingualText('Add to Comiket Master Sheet', 'コミケ作戦シートに追加'))}
+            <span style="color: ${isTracked ? '#10b981' : '#f59e0b'};">${isTracked ? '✅' : '⛩️'}</span> ${escapeHtml(modalTitleText)}
           </div>
           <button class="comiket-modal-close" id="cmt-close-btn">&times;</button>
         </div>
@@ -149,7 +207,7 @@
         </div>
         <div class="comiket-modal-footer">
           <button class="comiket-btn-secondary" id="cmt-cancel-btn">${escapeHtml(extAPI.getBilingualText('Cancel', 'キャンセル'))}</button>
-          <button class="comiket-btn-primary" id="cmt-submit-btn">💾 ${escapeHtml(extAPI.getBilingualText('Save Circle', '作戦シートに保存'))}</button>
+          <button class="comiket-btn-primary" id="cmt-submit-btn">${submitBtnText}</button>
         </div>
       </div>
     `;
@@ -208,7 +266,9 @@
         });
 
         if (response && response.success) {
-          showToast(`✅ Saved ${fullLocation} (${payload.circleName}) to Comiket Plan!`, 'success');
+          const actionWord = response.isUpdate ? 'Updated' : 'Saved';
+          showToast(`✅ ${actionWord} ${fullLocation} (${payload.circleName}) in Comiket Plan!`, 'success');
+          await refreshSavedItems();
           closeModal();
         } else {
           showToast(`⚠️ ${response?.error || 'Failed to save.'}`, 'error');
@@ -281,16 +341,22 @@
       wrapper.style.margin = '6px 0';
 
       parsedTargets.forEach((parsed) => {
+        const isTracked = isItemTracked(parsed);
+
         const btn = document.createElement('button');
         btn.className = 'comiket-tracker-btn';
         btn.type = 'button';
+        if (isTracked) {
+          btn.style.borderColor = '#10b981';
+          btn.style.background = 'rgba(16, 185, 129, 0.12)';
+        }
 
         const iconSpan = document.createElement('span');
-        iconSpan.style.color = '#f59e0b';
-        iconSpan.textContent = '⛩️';
+        iconSpan.style.color = isTracked ? '#10b981' : '#f59e0b';
+        iconSpan.textContent = isTracked ? '✅' : '⛩️';
 
         const labelSpan = document.createElement('span');
-        labelSpan.textContent = '+ Track';
+        labelSpan.textContent = isTracked ? 'Tracked' : '+ Track';
 
         const badgeSpan = document.createElement('span');
         badgeSpan.className = 'badge-tag';

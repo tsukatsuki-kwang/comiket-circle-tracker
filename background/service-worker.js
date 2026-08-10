@@ -116,7 +116,7 @@ async function handleGoogleAccountConnect() {
 }
 
 /**
- * Saves circle data locally and syncs to Google Sheet if connected.
+ * Saves circle data locally with strict duplication check (Day + Space + Artist/Circle).
  */
 async function handleSaveCircle(circleData) {
   const { webAppUrl, circleItems = [], googleAuthToken, dedicatedSheetId } = await extAPI.storage.get([
@@ -126,22 +126,38 @@ async function handleSaveCircle(circleData) {
     'dedicatedSheetId'
   ]);
 
-  // 1. Save locally with day:space unique key
-  const uniqueKey = `${circleData.day}:${circleData.space}`;
-  const existingIdx = circleItems.findIndex((item) => `${item.day}:${item.space}` === uniqueKey);
+  // Duplication matching check
+  const newDay = circleData.dayCode || (circleData.day && circleData.day.includes('2') ? 'D2' : 'D1');
+  const newSpace = (circleData.spaceNum || circleData.space || '').toLowerCase().trim();
+  const newArtist = (circleData.artist || circleData.circleName || '').toLowerCase().trim();
+
+  const existingIdx = circleItems.findIndex((item) => {
+    const exDay = item.dayCode || (item.day && item.day.includes('2') ? 'D2' : 'D1');
+    const exSpace = (item.spaceNum || item.space || '').toLowerCase().trim();
+    const exArtist = (item.artist || item.circleName || '').toLowerCase().trim();
+
+    const sameDay = exDay === newDay;
+    const sameSpace = exSpace.length > 0 && exSpace === newSpace;
+    const sameArtist = exArtist.length > 0 && (exArtist === newArtist || exArtist.includes(newArtist) || newArtist.includes(exArtist));
+
+    return sameDay && sameSpace && sameArtist;
+  });
+
   let updatedItems = [...circleItems];
+  let isUpdate = false;
 
   if (existingIdx >= 0) {
     updatedItems[existingIdx] = circleData;
+    isUpdate = true;
   } else {
     updatedItems.unshift(circleData);
   }
 
   await extAPI.storage.set({ circleItems: updatedItems });
 
-  let syncNote = 'Saved locally to your Comiket Plan list.';
+  let syncNote = isUpdate ? 'Updated existing circle entry in your Comiket Plan.' : 'Saved locally to your Comiket Plan list.';
 
-  const dayCode = circleData.dayCode || (circleData.day && circleData.day.includes('2') ? 'D2' : 'D1');
+  const dayCode = newDay;
   const building = circleData.building || circleData.hall || '東123';
   const block = circleData.block || '';
   const space = circleData.spaceNum || circleData.space || '';
@@ -150,7 +166,7 @@ async function handleSaveCircle(circleData) {
   const day1Loc = circleData.day1Location || (dayCode === 'D1' ? fullLoc : '');
   const day2Loc = circleData.day2Location || (dayCode === 'D2' ? fullLoc : '');
 
-  // 2. Direct Google Sheets API v4 Sync if token is active
+  // Direct Google Sheets API v4 Sync if token is active
   if (googleAuthToken && dedicatedSheetId) {
     try {
       const imageFormula = circleData.imageUrl ? `=IMAGE("${circleData.imageUrl}")` : '';
@@ -183,24 +199,24 @@ async function handleSaveCircle(circleData) {
       });
 
       if (appendRes.ok) {
-        syncNote = 'Saved locally & appended directly to your dedicated Google Sheet!';
+        syncNote = isUpdate ? 'Updated locally & synced to Google Sheet!' : 'Saved locally & appended to Google Sheet!';
       }
     } catch (e) {
       console.warn('[Comiket Tracker] Direct Google Sheet API sync optional failure:', e);
     }
   } else if (webAppUrl) {
-    // 3. Fallback Web App Cloud Sync if configured
+    // Fallback Web App Cloud Sync if configured
     try {
       await fetch(webAppUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(circleData)
       });
-      syncNote = 'Saved locally & synced to Google Sheet Web App!';
+      syncNote = isUpdate ? 'Updated locally & synced to Web App!' : 'Saved locally & synced to Web App!';
     } catch (e) {
       console.warn('[Comiket Tracker] Web App sync optional failure:', e);
     }
   }
 
-  return { success: true, count: updatedItems.length, syncNote: syncNote };
+  return { success: true, count: updatedItems.length, isUpdate: isUpdate, syncNote: syncNote };
 }
