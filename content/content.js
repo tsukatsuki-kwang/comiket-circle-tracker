@@ -11,26 +11,12 @@
 
   console.log('[Comiket Tracker] Content script active with multi-day target consolidation.');
 
-  let savedItemsMap = new Map();
+  let savedItemsList = [];
 
   async function refreshSavedItems() {
     try {
       const res = await extAPI.storage.get(['circleItems']);
-      const items = res?.circleItems || [];
-      savedItemsMap.clear();
-      items.forEach(it => {
-        const dayCode = it.dayCode || (it.day && it.day.includes('2') ? 'D2' : 'D1');
-        const space = (it.spaceNum || it.space || '').toLowerCase().trim();
-        const artist = (it.artist || it.circleName || '').toLowerCase().trim();
-        if (dayCode && space) {
-          savedItemsMap.set(`${dayCode}:${space}`, it);
-          if (artist) {
-            savedItemsMap.set(`${dayCode}:${space}:${artist}`, it);
-          }
-        }
-        if (it.day1Location) savedItemsMap.set(it.day1Location.toLowerCase().trim(), it);
-        if (it.day2Location) savedItemsMap.set(it.day2Location.toLowerCase().trim(), it);
-      });
+      savedItemsList = res?.circleItems || [];
       updateExistingButtonsInDOM();
     } catch (e) {
       console.warn('[Comiket Tracker] Failed to refresh saved items:', e);
@@ -76,21 +62,42 @@
     });
   }
 
-  function getSavedItem(parsed) {
-    if (!parsed) return null;
-    if (parsed.day1Location && savedItemsMap.has(parsed.day1Location.toLowerCase().trim())) {
-      return savedItemsMap.get(parsed.day1Location.toLowerCase().trim());
-    }
-    if (parsed.day2Location && savedItemsMap.has(parsed.day2Location.toLowerCase().trim())) {
-      return savedItemsMap.get(parsed.day2Location.toLowerCase().trim());
-    }
+  function normalizeStr(str) {
+    return (str || '').toLowerCase().trim().replace(/[\s\(\)\@＠]/g, '');
+  }
 
-    const dayCode = parsed.dayCode || (parsed.day && parsed.day.includes('2') ? 'D2' : 'D1');
-    const space = (parsed.spaceNum || parsed.space || '').toLowerCase().trim();
-    const artist = (parsed.artist || parsed.circleName || '').toLowerCase().trim();
+  function getSavedItem(targetItem) {
+    if (!targetItem || savedItemsList.length === 0) return null;
 
-    if (savedItemsMap.has(`${dayCode}:${space}:${artist}`)) return savedItemsMap.get(`${dayCode}:${space}:${artist}`);
-    if (savedItemsMap.has(`${dayCode}:${space}`)) return savedItemsMap.get(`${dayCode}:${space}`);
+    const targetArtist = normalizeStr(targetItem.artist || targetItem.circleName);
+    const targetD1 = normalizeStr(targetItem.day1Location);
+    const targetD2 = normalizeStr(targetItem.day2Location);
+    const targetDay = targetItem.dayCode || (targetItem.day && targetItem.day.includes('2') ? 'D2' : 'D1');
+    const targetLoc = normalizeStr(targetItem.fullLocation || targetItem.space);
+
+    for (const savedItem of savedItemsList) {
+      const savedArtist = normalizeStr(savedItem.artist || savedItem.circleName);
+      if (!savedArtist || !targetArtist) continue;
+
+      const artistMatches = savedArtist === targetArtist || savedArtist.includes(targetArtist) || targetArtist.includes(savedArtist);
+      if (!artistMatches) continue;
+
+      const savedD1 = normalizeStr(savedItem.day1Location);
+      const savedD2 = normalizeStr(savedItem.day2Location);
+
+      if (targetD1 && targetD2 && savedD1 && savedD2) {
+        if (savedD1 === targetD1 && savedD2 === targetD2) {
+          return savedItem;
+        }
+      } else {
+        const savedDay = savedItem.dayCode || (savedItem.day && savedItem.day.includes('2') ? 'D2' : 'D1');
+        const savedLoc = normalizeStr(savedItem.fullLocation || savedItem.space);
+
+        if (savedDay === targetDay && savedLoc === targetLoc) {
+          return savedItem;
+        }
+      }
+    }
     return null;
   }
 

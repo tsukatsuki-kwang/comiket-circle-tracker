@@ -38,6 +38,10 @@ extAPI.raw.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+function normalizeStr(str) {
+  return (str || '').toLowerCase().trim().replace(/[\s\(\)\@＠]/g, '');
+}
+
 /**
  * Handles Google Account Sign-In via chrome.identity
  */
@@ -116,7 +120,7 @@ async function handleGoogleAccountConnect() {
 }
 
 /**
- * Saves circle data locally with strict duplication check (Day + Space + Artist/Circle).
+ * Saves circle data locally with strict duplication check (Day 1 + Day 2 + Artist exact match).
  */
 async function handleSaveCircle(circleData) {
   const { webAppUrl, circleItems = [], googleAuthToken, dedicatedSheetId } = await extAPI.storage.get([
@@ -126,21 +130,30 @@ async function handleSaveCircle(circleData) {
     'dedicatedSheetId'
   ]);
 
-  // Duplication matching check
-  const newDay = circleData.dayCode || (circleData.day && circleData.day.includes('2') ? 'D2' : 'D1');
-  const newSpace = (circleData.spaceNum || circleData.space || '').toLowerCase().trim();
-  const newArtist = (circleData.artist || circleData.circleName || '').toLowerCase().trim();
+  const targetArtist = normalizeStr(circleData.artist || circleData.circleName);
+  const targetD1 = normalizeStr(circleData.day1Location);
+  const targetD2 = normalizeStr(circleData.day2Location);
+  const targetDay = circleData.dayCode || (circleData.day && circleData.day.includes('2') ? 'D2' : 'D1');
+  const targetLoc = normalizeStr(circleData.fullLocation || circleData.space);
 
-  const existingIdx = circleItems.findIndex((item) => {
-    const exDay = item.dayCode || (item.day && item.day.includes('2') ? 'D2' : 'D1');
-    const exSpace = (item.spaceNum || item.space || '').toLowerCase().trim();
-    const exArtist = (item.artist || item.circleName || '').toLowerCase().trim();
+  const existingIdx = circleItems.findIndex((savedItem) => {
+    const savedArtist = normalizeStr(savedItem.artist || savedItem.circleName);
+    if (!savedArtist || !targetArtist) return false;
 
-    const sameDay = exDay === newDay;
-    const sameSpace = exSpace.length > 0 && exSpace === newSpace;
-    const sameArtist = exArtist.length > 0 && (exArtist === newArtist || exArtist.includes(newArtist) || newArtist.includes(exArtist));
+    const artistMatches = savedArtist === targetArtist || savedArtist.includes(targetArtist) || targetArtist.includes(savedArtist);
+    if (!artistMatches) return false;
 
-    return sameDay && sameSpace && sameArtist;
+    const savedD1 = normalizeStr(savedItem.day1Location);
+    const savedD2 = normalizeStr(savedItem.day2Location);
+
+    if (targetD1 && targetD2 && savedD1 && savedD2) {
+      return savedD1 === targetD1 && savedD2 === targetD2;
+    }
+
+    const savedDay = savedItem.dayCode || (savedItem.day && savedItem.day.includes('2') ? 'D2' : 'D1');
+    const savedLoc = normalizeStr(savedItem.fullLocation || savedItem.space);
+
+    return savedDay === targetDay && savedLoc === targetLoc;
   });
 
   let updatedItems = [...circleItems];
@@ -157,7 +170,7 @@ async function handleSaveCircle(circleData) {
 
   let syncNote = isUpdate ? 'Updated existing circle entry in your Comiket Plan.' : 'Saved locally to your Comiket Plan list.';
 
-  const dayCode = newDay;
+  const dayCode = targetDay;
   const building = circleData.building || circleData.hall || '東123';
   const block = circleData.block || '';
   const space = circleData.spaceNum || circleData.space || '';
