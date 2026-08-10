@@ -140,7 +140,15 @@
       selectedPriority = settings.defaultPriority;
     }
 
-    const displayDescription = includeDescription ? (parsedData.description || '') : '';
+    // Always ensure description is populated (from saved item or raw post text)
+    let displayDescription = '';
+    if (includeDescription) {
+      if (trackedItem && trackedItem.description && trackedItem.description.trim()) {
+        displayDescription = trackedItem.description;
+      } else {
+        displayDescription = rawParsedData.description || rawParsedData.fullText || parsedData.description || '';
+      }
+    }
 
     const backdrop = document.createElement('div');
     backdrop.className = 'comiket-modal-backdrop';
