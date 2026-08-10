@@ -131,23 +131,20 @@
     const isTracked = trackedItem !== null;
     const parsedData = isTracked ? { ...rawParsedData, ...trackedItem } : rawParsedData;
 
-    const settings = await extAPI.storage.get(['showImagePreview', 'includeDescription', 'defaultPriority']);
+    const settings = await extAPI.storage.get(['showImagePreview', 'defaultPriority']);
     const showImagePreview = settings.showImagePreview === true;
-    const includeDescription = settings.includeDescription !== false;
 
     let selectedPriority = parsedData.priority || 'P2 (Medium)';
     if (!parsedData.priority && settings.defaultPriority && (settings.defaultPriority.startsWith('P0') || settings.defaultPriority.startsWith('P1') || settings.defaultPriority.startsWith('P3'))) {
       selectedPriority = settings.defaultPriority;
     }
 
-    // Always ensure description is populated (from saved item or raw post text)
+    // Always guarantee description resolution (saved custom description -> raw post description -> full tweet text)
     let displayDescription = '';
-    if (includeDescription) {
-      if (trackedItem && trackedItem.description && trackedItem.description.trim()) {
-        displayDescription = trackedItem.description;
-      } else {
-        displayDescription = rawParsedData.description || rawParsedData.fullText || parsedData.description || '';
-      }
+    if (trackedItem && trackedItem.description && trackedItem.description.trim()) {
+      displayDescription = trackedItem.description;
+    } else {
+      displayDescription = rawParsedData.description || rawParsedData.fullText || parsedData.description || '';
     }
 
     const backdrop = document.createElement('div');
@@ -237,7 +234,7 @@
 
           <div class="comiket-field-group">
             <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Item Description & Post Text', 'お品書き・ポスト本文'))}</label>
-            <textarea class="comiket-textarea" id="cmt-desc" placeholder="Post description (Optional)...">${escapeHtml(displayDescription)}</textarea>
+            <textarea class="comiket-textarea" id="cmt-desc" placeholder="Post description (Optional)..."></textarea>
           </div>
         </div>
         <div class="comiket-modal-footer">
@@ -249,6 +246,12 @@
 
     setSafeHTML(backdrop, modalHtml);
     document.body.appendChild(backdrop);
+
+    // Directly assign textarea.value on live DOM node to bypass browser DOMParser textarea quirk
+    const descElem = backdrop.querySelector('#cmt-desc');
+    if (descElem) {
+      descElem.value = displayDescription;
+    }
 
     const closeModal = () => backdrop.remove();
     backdrop.querySelector('#cmt-close-btn').addEventListener('click', closeModal);
