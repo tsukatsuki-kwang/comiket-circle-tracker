@@ -29,9 +29,37 @@
           }
         }
       });
+      updateExistingButtonsInDOM();
     } catch (e) {
       console.warn('[Comiket Tracker] Failed to refresh saved items:', e);
     }
+  }
+
+  function updateExistingButtonsInDOM() {
+    document.querySelectorAll('.comiket-tracker-btn').forEach((btn) => {
+      const parsedData = btn.__parsedData;
+      if (!parsedData) return;
+
+      const isTracked = isItemTracked(parsedData);
+      if (isTracked) {
+        btn.style.borderColor = '#10b981';
+        btn.style.background = 'rgba(16, 185, 129, 0.12)';
+      } else {
+        btn.style.borderColor = '#f59e0b';
+        btn.style.background = 'rgba(245, 158, 11, 0.12)';
+      }
+
+      const iconSpan = btn.querySelector('.cmt-icon');
+      if (iconSpan) {
+        iconSpan.style.color = isTracked ? '#10b981' : '#f59e0b';
+        iconSpan.textContent = isTracked ? '✅' : '⛩️';
+      }
+
+      const labelSpan = btn.querySelector('.cmt-label');
+      if (labelSpan) {
+        labelSpan.textContent = isTracked ? 'Tracked' : '+ Track';
+      }
+    });
   }
 
   refreshSavedItems().then(() => {
@@ -41,17 +69,13 @@
   if (extAPI.raw.storage && extAPI.raw.storage.onChanged) {
     extAPI.raw.storage.onChanged.addListener((changes) => {
       if (changes.circleItems) {
-        refreshSavedItems().then(() => {
-          document.querySelectorAll('article[data-comiket-processed="true"]').forEach((art) => {
-            art.removeAttribute('data-comiket-processed');
-          });
-          scanFeedDebounced();
-        });
+        refreshSavedItems();
       }
     });
   }
 
   function isItemTracked(parsed) {
+    if (!parsed) return false;
     const dayCode = parsed.dayCode || (parsed.day && parsed.day.includes('2') ? 'D2' : 'D1');
     const space = (parsed.spaceNum || parsed.space || '').toLowerCase().trim();
     const artist = (parsed.artist || parsed.circleName || '').toLowerCase().trim();
@@ -271,10 +295,6 @@
           const actionWord = response.isUpdate ? 'Updated' : 'Saved';
           showToast(`✅ ${actionWord} ${fullLocation} (${payload.circleName}) in Comiket Plan!`, 'success');
           await refreshSavedItems();
-          document.querySelectorAll('article[data-comiket-processed="true"]').forEach((art) => {
-            art.removeAttribute('data-comiket-processed');
-          });
-          scanFeedDebounced();
           closeModal();
         } else {
           showToast(`⚠️ ${response?.error || 'Failed to save.'}`, 'error');
@@ -298,12 +318,6 @@
   }
 
   function processTweet(article) {
-    // Remove any previously injected wrapper if re-processing to prevent duplicate buttons
-    const oldWrapper = article.querySelector('.comiket-tracker-wrapper');
-    if (oldWrapper) {
-      oldWrapper.remove();
-    }
-
     if (article.hasAttribute('data-comiket-processed')) return;
 
     let authorName = '';
@@ -359,16 +373,20 @@
         const btn = document.createElement('button');
         btn.className = 'comiket-tracker-btn';
         btn.type = 'button';
+        btn.__parsedData = parsed;
+
         if (isTracked) {
           btn.style.borderColor = '#10b981';
           btn.style.background = 'rgba(16, 185, 129, 0.12)';
         }
 
         const iconSpan = document.createElement('span');
+        iconSpan.className = 'cmt-icon';
         iconSpan.style.color = isTracked ? '#10b981' : '#f59e0b';
         iconSpan.textContent = isTracked ? '✅' : '⛩️';
 
         const labelSpan = document.createElement('span');
+        labelSpan.className = 'cmt-label';
         labelSpan.textContent = isTracked ? 'Tracked' : '+ Track';
 
         const badgeSpan = document.createElement('span');
