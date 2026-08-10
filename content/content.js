@@ -34,7 +34,9 @@
     }
   }
 
-  refreshSavedItems();
+  refreshSavedItems().then(() => {
+    scanFeed();
+  });
 
   if (extAPI.raw.storage && extAPI.raw.storage.onChanged) {
     extAPI.raw.storage.onChanged.addListener((changes) => {
@@ -269,6 +271,10 @@
           const actionWord = response.isUpdate ? 'Updated' : 'Saved';
           showToast(`✅ ${actionWord} ${fullLocation} (${payload.circleName}) in Comiket Plan!`, 'success');
           await refreshSavedItems();
+          document.querySelectorAll('article[data-comiket-processed="true"]').forEach((art) => {
+            art.removeAttribute('data-comiket-processed');
+          });
+          scanFeedDebounced();
           closeModal();
         } else {
           showToast(`⚠️ ${response?.error || 'Failed to save.'}`, 'error');
@@ -292,6 +298,12 @@
   }
 
   function processTweet(article) {
+    // Remove any previously injected wrapper if re-processing to prevent duplicate buttons
+    const oldWrapper = article.querySelector('.comiket-tracker-wrapper');
+    if (oldWrapper) {
+      oldWrapper.remove();
+    }
+
     if (article.hasAttribute('data-comiket-processed')) return;
 
     let authorName = '';
@@ -334,6 +346,7 @@
       const actionGroup = article.querySelector('div[role="group"]') || (textElement ? textElement.parentNode : article);
 
       const wrapper = document.createElement('div');
+      wrapper.className = 'comiket-tracker-wrapper';
       wrapper.style.display = 'flex';
       wrapper.style.flexWrap = 'wrap';
       wrapper.style.gap = '6px';
