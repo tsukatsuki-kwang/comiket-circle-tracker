@@ -3,6 +3,16 @@
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const comiketInfo = ComiketParser.getCurrentComiketInfo();
+
+  const brandSub = document.querySelector('.brand-sub');
+  if (brandSub) brandSub.textContent = `${comiketInfo.edition} Plan`;
+
+  const manualInput = document.getElementById('manual-text');
+  if (manualInput) {
+    manualInput.placeholder = `Paste tweet or circle announcement text (e.g. ${comiketInfo.edition} 土曜 東モ-30a)...`;
+  }
+
   function setSafeHTML(element, htmlString) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlString, 'text/html');
@@ -130,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (res && res.success) {
       manualText.value = '';
       parsedPreview.style.display = 'none';
-      btnManualSync.textContent = res.isUpdate ? '✅ Updated Circle!' : '✅ Saved to Comiket Plan!';
+      btnManualSync.textContent = res.isUpdate ? '✅ Updated Circle!' : `✅ Saved to ${comiketInfo.edition} Plan!`;
       setTimeout(() => {
         const iconSpan = document.createElement('span');
         iconSpan.textContent = '💾 ';
@@ -315,7 +325,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Comiket_C108_Plan_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `Comiket_${comiketInfo.edition}_Plan_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   });
@@ -342,7 +352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Comiket_C108_Plan_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `Comiket_${comiketInfo.edition}_Plan_Backup_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   });
