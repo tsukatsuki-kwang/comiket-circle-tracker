@@ -1,6 +1,7 @@
 /**
  * Comiket Circle Tracker Sync - Content Script for X (Twitter)
  * Scans tweet cards, author display names, images, and post detail views with real-time duplication tracking & multi-day consolidation.
+ * Supports Master Extension Enable/Disable toggle control.
  */
 
 (function () {
@@ -12,18 +13,35 @@
   console.log('[Comiket Tracker] Content script active with multi-day target consolidation.');
 
   let savedItemsList = [];
+  let extensionEnabled = true;
 
   async function refreshSavedItems() {
     try {
-      const res = await extAPI.storage.get(['circleItems']);
+      const res = await extAPI.storage.get(['circleItems', 'extensionEnabled']);
       savedItemsList = res?.circleItems || [];
-      updateExistingButtonsInDOM();
+      extensionEnabled = res?.extensionEnabled !== false;
+
+      if (!extensionEnabled) {
+        clearButtonsFromDOM();
+      } else {
+        updateExistingButtonsInDOM();
+      }
     } catch (e) {
       console.warn('[Comiket Tracker] Failed to refresh saved items:', e);
     }
   }
 
+  function clearButtonsFromDOM() {
+    document.querySelectorAll('.comiket-tracker-wrapper').forEach((w) => w.remove());
+    document.querySelectorAll('article[data-comiket-processed="true"]').forEach((art) => art.removeAttribute('data-comiket-processed'));
+  }
+
   function updateExistingButtonsInDOM() {
+    if (!extensionEnabled) {
+      clearButtonsFromDOM();
+      return;
+    }
+
     document.querySelectorAll('.comiket-tracker-btn').forEach((btn) => {
       const parsedData = btn.__parsedData;
       if (!parsedData) return;
@@ -56,6 +74,14 @@
 
   if (extAPI.raw.storage && extAPI.raw.storage.onChanged) {
     extAPI.raw.storage.onChanged.addListener((changes) => {
+      if (changes.extensionEnabled !== undefined) {
+        extensionEnabled = changes.extensionEnabled.newValue !== false;
+        if (!extensionEnabled) {
+          clearButtonsFromDOM();
+        } else {
+          scanFeed();
+        }
+      }
       if (changes.circleItems) {
         refreshSavedItems();
       }
@@ -98,6 +124,7 @@
         }
       }
     }
+
     return null;
   }
 
@@ -254,148 +281,115 @@
     setSafeHTML(backdrop, modalHtml);
     document.body.appendChild(backdrop);
 
-    // Directly assign textarea.value on live DOM node to bypass browser DOMParser textarea quirk
     const descElem = backdrop.querySelector('#cmt-desc');
     if (descElem) {
       descElem.value = displayDescription;
     }
 
+    const closeBtn = backdrop.querySelector('#cmt-close-btn');
+    const cancelBtn = backdrop.querySelector('#cmt-cancel-btn');
+    const submitBtn = backdrop.querySelector('#cmt-submit-btn');
+
     const closeModal = () => backdrop.remove();
-    backdrop.querySelector('#cmt-close-btn').addEventListener('click', closeModal);
-    backdrop.querySelector('#cmt-cancel-btn').addEventListener('click', closeModal);
-    backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) closeModal();
-    });
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
 
-    backdrop.querySelector('#cmt-submit-btn').addEventListener('click', async () => {
-      const submitBtn = backdrop.querySelector('#cmt-submit-btn');
+    submitBtn.addEventListener('click', async () => {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Saving...';
+      submitBtn.textContent = '💾 Saving...';
 
-      const d1LocVal = backdrop.querySelector('#cmt-day1-loc').value.trim();
-      const d2LocVal = backdrop.querySelector('#cmt-day2-loc').value.trim();
+      const d1Val = backdrop.querySelector('#cmt-day1-loc').value.trim();
+      const d2Val = backdrop.querySelector('#cmt-day2-loc').value.trim();
+      const priorityVal = backdrop.querySelector('#cmt-priority').value;
+      const circleVal = backdrop.querySelector('#cmt-circle').value.trim();
+      const artistVal = backdrop.querySelector('#cmt-artist').value.trim();
+      const priceVal = backdrop.querySelector('#cmt-price').value.trim();
+      const imgVal = backdrop.querySelector('#cmt-img-url').value.trim();
+      const sourceVal = backdrop.querySelector('#cmt-source-url').value.trim();
+      const fixupVal = backdrop.querySelector('#cmt-fixup-url').value.trim();
+      const descVal = backdrop.querySelector('#cmt-desc').value.trim();
 
-      const dayVal = d1LocVal ? 'Day 1' : 'Day 2';
-      const dayCode = d1LocVal ? 'D1' : 'D2';
-      const activeLoc = d1LocVal || d2LocVal || 'D1 東123 未定';
-
-      const payload = {
-        day: dayVal,
-        dayCode: dayCode,
-        priority: backdrop.querySelector('#cmt-priority').value,
-        building: parsedData.building || '東123',
-        hall: parsedData.building || '東123',
-        block: parsedData.block || '',
-        spaceNum: parsedData.spaceNum || '',
-        space: parsedData.space || '',
-        fullLocation: activeLoc,
-        day1Location: d1LocVal,
-        day2Location: d2LocVal,
-        circleName: backdrop.querySelector('#cmt-circle').value,
-        artist: backdrop.querySelector('#cmt-artist').value,
-        price: backdrop.querySelector('#cmt-price').value,
-        imageUrl: backdrop.querySelector('#cmt-img-url').value,
-        sourceUrl: backdrop.querySelector('#cmt-source-url').value,
-        fixupUrl: backdrop.querySelector('#cmt-fixup-url').value,
-        description: backdrop.querySelector('#cmt-desc').value,
-        shopUrl: parsedData.shopUrl || '',
-        status: 'Pending',
-        timestamp: new Date().toISOString()
+      const updatedPayload = {
+        ...parsedData,
+        day1Location: d1Val,
+        day2Location: d2Val,
+        fullLocation: (d1Val && d2Val) ? `${d1Val} / ${d2Val}` : (d1Val || d2Val || parsedData.fullLocation),
+        priority: priorityVal,
+        circleName: circleVal || parsedData.circleName,
+        artist: artistVal || parsedData.artist,
+        price: priceVal ? Number(priceVal) : '',
+        imageUrl: imgVal || parsedData.imageUrl,
+        sourceUrl: sourceVal || parsedData.sourceUrl,
+        fixupUrl: fixupVal || parsedData.fixupUrl,
+        cunnyUrl: fixupVal || parsedData.cunnyUrl,
+        description: descVal
       };
 
       try {
         const response = await extAPI.runtime.sendMessage({
           action: 'SAVE_CIRCLE',
-          data: payload
+          data: updatedPayload
         });
 
         if (response && response.success) {
-          const actionWord = response.isUpdate ? 'Updated' : 'Saved';
-          showToast(`✅ ${actionWord} ${payload.circleName} in Comiket Plan!`, 'success');
-          await refreshSavedItems();
+          showToast(`✅ ${response.syncNote || 'Saved to Comiket Master Sheet!'}`, 'success');
           closeModal();
+          refreshSavedItems();
         } else {
-          showToast(`⚠️ ${response?.error || 'Failed to save.'}`, 'error');
+          showToast(`⚠️ Save Failed: ${response?.error || 'Unknown error'}`, 'error');
           submitBtn.disabled = false;
+          submitBtn.textContent = submitBtnText;
         }
       } catch (err) {
-        showToast(`❌ Error: ${err.message}`, 'error');
+        showToast(`⚠️ Extension Error: ${err.message}`, 'error');
         submitBtn.disabled = false;
+        submitBtn.textContent = submitBtnText;
       }
     });
   }
 
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
   function processTweet(article) {
-    if (article.hasAttribute('data-comiket-processed')) return;
+    if (!extensionEnabled) {
+      const oldWrapper = article.querySelector('.comiket-tracker-wrapper');
+      if (oldWrapper) oldWrapper.remove();
+      article.removeAttribute('data-comiket-processed');
+      return;
+    }
 
-    let authorName = '';
-    let authorHandle = '';
+    if (article.getAttribute('data-comiket-processed') === 'true') return;
+
     const userNamesElem = article.querySelector('div[data-testid="User-Name"]');
-    if (userNamesElem) {
-      authorName = userNamesElem.innerText.replace(/\n/g, ' ').trim();
-      const handleElem = userNamesElem.querySelector('a[href*="/"]');
-      if (handleElem) {
-        const hrefParts = handleElem.getAttribute('href').split('/');
-        authorHandle = `@${hrefParts[1]}`;
-      }
-    }
+    const textElem = article.querySelector('div[data-testid="tweetText"]');
 
-    const textElement = article.querySelector('div[data-testid="tweetText"]');
-    const tweetText = textElement ? textElement.innerText : '';
+    const combinedText = `${userNamesElem ? userNamesElem.innerText : ''} ${textElem ? textElem.innerText : ''}`;
+    if (!combinedText.trim()) return;
 
-    let imageUrl = '';
-    const imgElem = article.querySelector('div[data-testid="tweetPhoto"] img, img[src*="pbs.twimg.com/media"]');
-    if (imgElem) {
-      imageUrl = imgElem.getAttribute('src');
-    }
+    const imgEl = article.querySelector('div[data-testid="tweetPhoto"] img, img[src*="pbs.twimg.com/media"]');
+    const parsedTargets = ComiketParser.parseAll(combinedText, { imageUrl: imgEl ? imgEl.src : '' });
 
-    let sourceUrl = window.location.href;
-    const timeElem = article.querySelector('time');
-    if (timeElem && timeElem.closest('a')) {
-      const relHref = timeElem.closest('a').getAttribute('href');
-      if (relHref) {
-        sourceUrl = `https://x.com${relHref}`;
-      }
-    }
-
-    const combinedText = `${authorName} ${tweetText}`;
-
-    const parsedTargets = ComiketParser.parseAll(combinedText, { authorHandle, authorName, sourceUrl, imageUrl });
-
-    if (parsedTargets.length > 0) {
+    if (parsedTargets && parsedTargets.length > 0) {
       article.setAttribute('data-comiket-processed', 'true');
-
-      const actionGroup = article.querySelector('div[role="group"]') || (textElement ? textElement.parentNode : article);
 
       const wrapper = document.createElement('div');
       wrapper.className = 'comiket-tracker-wrapper';
-      wrapper.style.display = 'flex';
-      wrapper.style.flexWrap = 'wrap';
-      wrapper.style.gap = '6px';
-      wrapper.style.width = '100%';
-      wrapper.style.margin = '6px 0';
+
+      const actionGroup = article.querySelector('div[role="group"]');
 
       parsedTargets.forEach((parsed) => {
         const isTracked = isItemTracked(parsed);
 
         const btn = document.createElement('button');
         btn.className = 'comiket-tracker-btn';
-        btn.type = 'button';
         btn.__parsedData = parsed;
+        btn.setAttribute('type', 'button');
+        btn.setAttribute('aria-label', `Track ${parsed.circleName} (${parsed.fullLocation})`);
 
         if (isTracked) {
           btn.style.borderColor = '#10b981';
           btn.style.background = 'rgba(16, 185, 129, 0.12)';
+        } else {
+          btn.style.borderColor = '#f59e0b';
+          btn.style.background = 'rgba(245, 158, 11, 0.12)';
         }
 
         const iconSpan = document.createElement('span');
@@ -424,8 +418,8 @@
 
       if (actionGroup && actionGroup.parentNode) {
         actionGroup.parentNode.insertBefore(wrapper, actionGroup);
-      } else if (textElement) {
-        textElement.appendChild(wrapper);
+      } else if (textElem) {
+        textElem.appendChild(wrapper);
       } else {
         article.appendChild(wrapper);
       }
@@ -434,6 +428,10 @@
 
   function scanFeed() {
     if (!extAPI.isContextValid()) return;
+    if (!extensionEnabled) {
+      clearButtonsFromDOM();
+      return;
+    }
     const articles = document.querySelectorAll('article[data-testid="tweet"]');
     articles.forEach(processTweet);
   }
@@ -455,6 +453,8 @@
       observer.disconnect();
       return;
     }
+    if (!extensionEnabled) return;
+
     let shouldScan = false;
     for (const mutation of mutations) {
       if (mutation.addedNodes.length > 0) {

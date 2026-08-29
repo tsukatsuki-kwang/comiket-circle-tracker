@@ -19,6 +19,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const tabBtns = document.querySelectorAll('.tab-btn');
   const tabContents = document.querySelectorAll('.tab-content');
 
+  const btnToggleExt = document.getElementById('btn-toggle-extension');
+  const statusText = document.getElementById('status-text');
+
   const manualText = document.getElementById('manual-text');
   const parsedPreview = document.getElementById('parsed-preview');
   const previewDaySpace = document.getElementById('preview-day-space');
@@ -48,6 +51,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   const linkSheet = document.getElementById('link-sheet');
 
   let currentParsed = null;
+  let extensionEnabled = true;
+
+  // 0. Master Enable/Disable Toggle Logic
+  async function initToggleStatus() {
+    const saved = await extAPI.storage.get(['extensionEnabled']);
+    extensionEnabled = saved.extensionEnabled !== false;
+    updateToggleUI();
+  }
+
+  function updateToggleUI() {
+    if (extensionEnabled) {
+      btnToggleExt.className = 'status-toggle-btn active';
+      statusText.textContent = 'Active';
+      btnToggleExt.title = 'Extension Enabled (Click to Disable)';
+    } else {
+      btnToggleExt.className = 'status-toggle-btn disabled';
+      statusText.textContent = 'Disabled';
+      btnToggleExt.title = 'Extension Disabled (Click to Enable)';
+    }
+  }
+
+  btnToggleExt.addEventListener('click', async () => {
+    extensionEnabled = !extensionEnabled;
+    updateToggleUI();
+    await extAPI.storage.set({ extensionEnabled: extensionEnabled });
+  });
 
   // 1. Tab Switching Logic
   tabBtns.forEach((btn) => {
@@ -347,5 +376,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  initToggleStatus();
   refreshStats();
 });

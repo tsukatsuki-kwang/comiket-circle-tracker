@@ -3,6 +3,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const enableExtInput = document.getElementById('opt-enable-ext');
   const urlInput = document.getElementById('opt-url');
   const sheetUrlInput = document.getElementById('opt-sheet-url');
   const priorityInput = document.getElementById('opt-priority');
@@ -16,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load existing options
   const savedData = await extAPI.storage.get([
+    'extensionEnabled',
     'webAppUrl',
     'dedicatedSheetUrl',
     'defaultPriority',
@@ -24,8 +26,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     'includeDescription'
   ]);
 
+  enableExtInput.checked = savedData.extensionEnabled !== false; // Default true
   if (savedData.webAppUrl) urlInput.value = savedData.webAppUrl;
   if (savedData.dedicatedSheetUrl) sheetUrlInput.value = savedData.dedicatedSheetUrl;
+
   if (savedData.defaultPriority) priorityInput.value = savedData.defaultPriority;
   if (savedData.defaultDay) dayInput.value = savedData.defaultDay;
   showImgInput.checked = savedData.showImagePreview === true; // Default false
@@ -41,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Save display & content preferences
   btnSave.addEventListener('click', async () => {
+    const extensionEnabled = enableExtInput.checked;
     const webAppUrl = urlInput.value.trim();
     const dedicatedSheetUrl = sheetUrlInput.value.trim();
     const defaultPriority = priorityInput.value;
@@ -49,6 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const includeDescription = includeDescInput.checked;
 
     await extAPI.storage.set({
+      extensionEnabled,
       webAppUrl,
       dedicatedSheetUrl,
       defaultPriority,
