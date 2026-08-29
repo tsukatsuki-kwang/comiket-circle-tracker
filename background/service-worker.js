@@ -1,6 +1,6 @@
 /**
  * Comiket Circle Tracker Sync - Background Service Worker (Manifest V3)
- * Handles local storage, Google Sheets API OAuth sync, and export/import actions.
+ * Handles local storage, Google Sheets API OAuth sync, and export/import actions with 3-Day Comiket support.
  */
 
 importScripts('../src/utils/browser-poly.js');
@@ -79,7 +79,7 @@ async function handleGoogleAccountConnect() {
           },
           body: JSON.stringify({
             properties: {
-              title: 'Comiket 108 Master Sheet'
+              title: 'Comiket Master Sheet'
             },
             sheets: [
               {
@@ -99,7 +99,7 @@ async function handleGoogleAccountConnect() {
         const spreadsheetId = sheetData.spreadsheetId;
         const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
 
-        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Circle Targets!A1:K1?valueInputOption=USER_ENTERED`, {
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Circle Targets!A1:L1?valueInputOption=USER_ENTERED`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -107,7 +107,7 @@ async function handleGoogleAccountConnect() {
           },
           body: JSON.stringify({
             values: [
-              ['Circle', 'Product', 'Day 1 Position', 'Day 2 Position', 'Priority', 'Price (¥)', 'Sample Image', 'Tweet Link', 'Web Purchase', 'Status', 'Note']
+              ['Circle', 'Product', 'Day 1 Position', 'Day 2 Position', 'Day 3 Position', 'Priority', 'Price (¥)', 'Sample Image', 'Tweet Link', 'Web Purchase', 'Status', 'Note']
             ]
           })
         });
@@ -127,7 +127,7 @@ async function handleGoogleAccountConnect() {
 }
 
 /**
- * Saves circle data locally with strict duplication check (Day 1 + Day 2 + Artist exact match).
+ * Saves circle data locally with strict duplication check (Day 1 + Day 2 + Day 3 + Artist exact match).
  */
 async function handleSaveCircle(circleData) {
   const { webAppUrl, circleItems = [], googleAuthToken, dedicatedSheetId } = await extAPI.storage.get([
@@ -140,7 +140,9 @@ async function handleSaveCircle(circleData) {
   const targetArtist = normalizeStr(circleData.artist || circleData.circleName);
   const targetD1 = normalizeStr(circleData.day1Location);
   const targetD2 = normalizeStr(circleData.day2Location);
-  const targetDay = circleData.dayCode || (circleData.day && circleData.day.includes('2') ? 'D2' : 'D1');
+  const targetD3 = normalizeStr(circleData.day3Location);
+
+  const targetDay = circleData.dayCode || (circleData.day && circleData.day.includes('3') ? 'D3' : (circleData.day && circleData.day.includes('2') ? 'D2' : 'D1'));
   const targetLoc = normalizeStr(circleData.fullLocation || circleData.space);
 
   const existingIdx = circleItems.findIndex((savedItem) => {
@@ -152,12 +154,13 @@ async function handleSaveCircle(circleData) {
 
     const savedD1 = normalizeStr(savedItem.day1Location);
     const savedD2 = normalizeStr(savedItem.day2Location);
+    const savedD3 = normalizeStr(savedItem.day3Location);
 
-    if (targetD1 && targetD2 && savedD1 && savedD2) {
-      return savedD1 === targetD1 && savedD2 === targetD2;
+    if (targetD1 && targetD2 && targetD3 && savedD1 && savedD2 && savedD3) {
+      return savedD1 === targetD1 && savedD2 === targetD2 && savedD3 === targetD3;
     }
 
-    const savedDay = savedItem.dayCode || (savedItem.day && savedItem.day.includes('2') ? 'D2' : 'D1');
+    const savedDay = savedItem.dayCode || (savedItem.day && savedItem.day.includes('3') ? 'D3' : (savedItem.day && savedItem.day.includes('2') ? 'D2' : 'D1'));
     const savedLoc = normalizeStr(savedItem.fullLocation || savedItem.space);
 
     return savedDay === targetDay && savedLoc === targetLoc;
@@ -185,6 +188,7 @@ async function handleSaveCircle(circleData) {
 
   const day1Loc = circleData.day1Location || (dayCode === 'D1' ? fullLoc : '');
   const day2Loc = circleData.day2Location || (dayCode === 'D2' ? fullLoc : '');
+  const day3Loc = circleData.day3Location || (dayCode === 'D3' ? fullLoc : '');
 
   // Direct Google Sheets API v4 Sync if token is active
   if (googleAuthToken && dedicatedSheetId) {
@@ -193,7 +197,7 @@ async function handleSaveCircle(circleData) {
       const tweetFormula = circleData.sourceUrl ? `=HYPERLINK("${circleData.sourceUrl}", "View Tweet")` : '';
       const shopFormula = circleData.shopUrl ? `=HYPERLINK("${circleData.shopUrl}", "Shop / Order")` : '';
 
-      const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${dedicatedSheetId}/values/Circle Targets!A:K:append?valueInputOption=USER_ENTERED`, {
+      const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${dedicatedSheetId}/values/Circle Targets!A:L:append?valueInputOption=USER_ENTERED`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${googleAuthToken}`,
@@ -206,6 +210,7 @@ async function handleSaveCircle(circleData) {
               circleData.description || circleData.product || '',
               day1Loc,
               day2Loc,
+              day3Loc,
               circleData.priority || 'P2 (Medium)',
               circleData.price ? Number(circleData.price) : '',
               imageFormula,
@@ -242,7 +247,7 @@ async function handleSaveCircle(circleData) {
 }
 
 /**
- * Imports an array of circle target items from Google Sheet into local storage.
+ * Imports an array of circle target items from Google Sheet into local storage with 3-Day Comiket support.
  */
 async function handleImportCircles(itemsToImport) {
   if (!Array.isArray(itemsToImport) || itemsToImport.length === 0) {
@@ -258,7 +263,9 @@ async function handleImportCircles(itemsToImport) {
     const targetArtist = normalizeStr(item.artist || item.circleName);
     const targetD1 = normalizeStr(item.day1Location);
     const targetD2 = normalizeStr(item.day2Location);
-    const targetDay = item.dayCode || (item.day && item.day.includes('2') ? 'D2' : 'D1');
+    const targetD3 = normalizeStr(item.day3Location);
+
+    const targetDay = item.dayCode || (item.day && item.day.includes('3') ? 'D3' : (item.day && item.day.includes('2') ? 'D2' : 'D1'));
     const targetLoc = normalizeStr(item.fullLocation || item.space);
 
     const existingIdx = updatedItems.findIndex((savedItem) => {
@@ -270,12 +277,13 @@ async function handleImportCircles(itemsToImport) {
 
       const savedD1 = normalizeStr(savedItem.day1Location);
       const savedD2 = normalizeStr(savedItem.day2Location);
+      const savedD3 = normalizeStr(savedItem.day3Location);
 
-      if (targetD1 && targetD2 && savedD1 && savedD2) {
-        return savedD1 === targetD1 && savedD2 === targetD2;
+      if (targetD1 && targetD2 && targetD3 && savedD1 && savedD2 && savedD3) {
+        return savedD1 === targetD1 && savedD2 === targetD2 && savedD3 === targetD3;
       }
 
-      const savedDay = savedItem.dayCode || (savedItem.day && savedItem.day.includes('2') ? 'D2' : 'D1');
+      const savedDay = savedItem.dayCode || (savedItem.day && savedItem.day.includes('3') ? 'D3' : (savedItem.day && savedItem.day.includes('2') ? 'D2' : 'D1'));
       const savedLoc = normalizeStr(savedItem.fullLocation || savedItem.space);
 
       return savedDay === targetDay && savedLoc === targetLoc;

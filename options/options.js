@@ -3,7 +3,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const comiketInfo = typeof ComiketParser !== 'undefined' ? ComiketParser.getCurrentComiketInfo() : { day1Label: 'Day 1 (Aug 15)', day2Label: 'Day 2 (Aug 16)' };
+  const comiketInfo = typeof ComiketParser !== 'undefined' ? ComiketParser.getCurrentComiketInfo() : { day1Label: 'Day 1 (Dec 29)', day2Label: 'Day 2 (Dec 30)', day3Label: 'Day 3 (Dec 31)' };
 
   const enableExtInput = document.getElementById('opt-enable-ext');
   const urlInput = document.getElementById('opt-url');
@@ -13,9 +13,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const showImgInput = document.getElementById('opt-show-img');
   const includeDescInput = document.getElementById('opt-include-desc');
 
-  if (dayInput && dayInput.options.length >= 2) {
+  if (dayInput && dayInput.options.length >= 3) {
     dayInput.options[0].text = comiketInfo.day1Label;
     dayInput.options[1].text = comiketInfo.day2Label;
+    dayInput.options[2].text = comiketInfo.day3Label || 'Day 3';
   }
 
   const btnSave = document.getElementById('btn-save');

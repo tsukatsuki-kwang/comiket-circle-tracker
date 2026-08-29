@@ -24,7 +24,7 @@
     "description": "Textarea label"
   },
   "placeholderPasteText": {
-    "message": "Paste tweet or circle announcement text (e.g. C108 土曜 東モ-30a)...",
+    "message": "Paste tweet or circle announcement text (e.g. C109 土曜 東モ-30a)...",
     "description": "Textarea placeholder"
   },
   "btnSaveCircle": {
@@ -41,6 +41,10 @@
   },
   "lblDay2Targets": {
     "message": "Day 2 Targets",
+    "description": "Stat label"
+  },
+  "lblDay3Targets": {
+    "message": "Day 3 Targets",
     "description": "Stat label"
   },
   "lblTotalBudget": {

@@ -14,7 +14,7 @@
         <div class="brand-icon">⛩️</div>
         <div>
           <div class="brand-title">Comiket Planner</div>
-          <div class="brand-sub">C108 Plan</div>
+          <div class="brand-sub">C109 Plan</div>
         </div>
       </div>
       <button class="status-toggle-btn active" id="btn-toggle-extension" title="Click to Enable / Disable Extension">
@@ -34,7 +34,7 @@
     <div class="tab-content active" id="manual-tab">
       <div class="form-group">
         <label class="label" data-i18n="lblPasteText">Paste Tweet / Announcement Text</label>
-        <textarea class="input-text" id="manual-text" placeholder="Paste tweet or circle announcement text (e.g. C108 土曜 東モ-30a)..."></textarea>
+        <textarea class="input-text" id="manual-text" placeholder="Paste tweet or circle announcement text (e.g. C109 土曜 東モ-30a)..."></textarea>
       </div>
 
       <div class="parsed-preview" id="parsed-preview" style="display: none;">
@@ -65,7 +65,7 @@
 
     <!-- Tab 3: Saved Circles & Budget Export/Import -->
     <div class="tab-content" id="stats-tab">
-      <div class="stat-grid">
+      <div class="stat-grid" style="grid-template-columns: 1fr 1fr 1fr;">
         <div class="stat-box">
           <div class="stat-num" id="stat-d1">0</div>
           <div class="stat-label" data-i18n="lblDay1Targets">Day 1 Targets</div>
@@ -73,6 +73,10 @@
         <div class="stat-box">
           <div class="stat-num" id="stat-d2">0</div>
           <div class="stat-label" data-i18n="lblDay2Targets">Day 2 Targets</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" id="stat-d3">0</div>
+          <div class="stat-label" data-i18n="lblDay3Targets">Day 3 Targets</div>
         </div>
       </div>
 
@@ -126,7 +130,7 @@
         <div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">
           Copy rows from your Google Sheet (Ctrl+C) and paste (Ctrl+V) them below:
         </div>
-        <textarea id="import-text" class="input-text" style="height: 110px; font-family: monospace; font-size: 11px;" placeholder="Circle&#9;Product&#9;Day 1 Position&#9;Day 2 Position&#9;Priority..."></textarea>
+        <textarea id="import-text" class="input-text" style="height: 110px; font-family: monospace; font-size: 11px;" placeholder="Circle&#9;Product&#9;Day 1 Position&#9;Day 2 Position&#9;Day 3 Position..."></textarea>
         <div style="display: flex; gap: 8px; margin-top: 10px;">
           <button class="btn-secondary" id="btn-cancel-import" style="flex: 1;">Cancel</button>
           <button class="btn-primary" id="btn-submit-import" style="flex: 1; background: #8b5cf6;">Import & Sync</button>

@@ -1,6 +1,6 @@
 /**
  * Comiket Circle Tracker Sync - Exporter & Importer Utilities
- * Generates CSV, TSV (for Google Sheets Ctrl+V copy), JSON exports, and parses Google Sheet table imports.
+ * Generates CSV, TSV (for Google Sheets Ctrl+V copy), JSON exports, and parses Google Sheet table imports with 3-Day Comiket support.
  */
 
 (function (global) {
@@ -12,7 +12,7 @@
 
   function formatRowData(item) {
     const day = item.day || 'Day 1';
-    const dayCode = item.dayCode || (day.includes('2') ? 'D2' : 'D1');
+    const dayCode = item.dayCode || (day.includes('3') ? 'D3' : (day.includes('2') ? 'D2' : 'D1'));
     const building = item.building || item.hall || '東123';
     const block = item.block || '';
     const space = item.spaceNum || item.space || '';
@@ -20,6 +20,7 @@
 
     const day1Loc = item.day1Location || (dayCode === 'D1' ? fullLoc : '');
     const day2Loc = item.day2Location || (dayCode === 'D2' ? fullLoc : '');
+    const day3Loc = item.day3Location || (dayCode === 'D3' ? fullLoc : '');
 
     const priority = item.priority || 'P2 (Medium)';
     const circleName = item.circleName || 'Unknown Circle';
@@ -39,6 +40,7 @@
       product,
       day1Loc,
       day2Loc,
+      day3Loc,
       priority,
       price,
       imageFormula,
@@ -57,6 +59,7 @@
       'Product',
       'Day 1 Position',
       'Day 2 Position',
+      'Day 3 Position',
       'Priority',
       'Price (¥)',
       'Sample Image',
@@ -75,6 +78,7 @@
         escapeCSVCell(r.product),
         escapeCSVCell(r.day1Loc),
         escapeCSVCell(r.day2Loc),
+        escapeCSVCell(r.day3Loc),
         escapeCSVCell(r.priority),
         escapeCSVCell(r.price),
         escapeCSVCell(r.imageFormula),
@@ -95,6 +99,7 @@
       'Product',
       'Day 1 Position',
       'Day 2 Position',
+      'Day 3 Position',
       'Priority',
       'Price (¥)',
       'Sample Image',
@@ -113,6 +118,7 @@
         r.product,
         r.day1Loc,
         r.day2Loc,
+        r.day3Loc,
         r.priority,
         r.price,
         r.imageFormula,
@@ -154,17 +160,20 @@
       const description = cols[1] || '';
       const day1Loc = cols[2] || '';
       const day2Loc = cols[3] || '';
-      const priority = cols[4] || 'P2 (Medium)';
-      const priceStr = cols[5] || '';
-      const imageUrlRaw = cols[6] || '';
-      const sourceUrlRaw = cols[7] || '';
-      const shopUrlRaw = cols[8] || '';
-      const status = cols[9] || 'Pending';
-      const notes = cols[10] || '';
+      const day3Loc = cols[4] || '';
+      const priority = cols[5] || 'P2 (Medium)';
+      const priceStr = cols[6] || '';
+      const imageUrlRaw = cols[7] || '';
+      const sourceUrlRaw = cols[8] || '';
+      const shopUrlRaw = cols[9] || '';
+      const status = cols[10] || 'Pending';
+      const notes = cols[11] || '';
 
-      const dayVal = day1Loc ? 'Day 1' : (day2Loc ? 'Day 2' : 'Day 1');
-      const dayCode = day1Loc ? 'D1' : (day2Loc ? 'D2' : 'D1');
-      const fullLoc = (day1Loc && day2Loc) ? `${day1Loc} / ${day2Loc}` : (day1Loc || day2Loc || 'D1 東123 未定');
+      const dayVal = day1Loc ? 'Day 1' : (day2Loc ? 'Day 2' : (day3Loc ? 'Day 3' : 'Day 1'));
+      const dayCode = day1Loc ? 'D1' : (day2Loc ? 'D2' : (day3Loc ? 'D3' : 'D1'));
+      const fullLoc = (day1Loc && day2Loc && day3Loc) 
+        ? `${day1Loc} / ${day2Loc} / ${day3Loc}` 
+        : ([day1Loc, day2Loc, day3Loc].filter(Boolean).join(' / ') || 'D1 東123 未定');
 
       const price = priceStr.replace(/[^0-9]/g, '');
 
@@ -194,6 +203,7 @@
         dayCode: dayCode,
         day1Location: day1Loc,
         day2Location: day2Loc,
+        day3Location: day3Loc,
         fullLocation: fullLoc,
         priority: priority,
         price: price ? Number(price) : '',

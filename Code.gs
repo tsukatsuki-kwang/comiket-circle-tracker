@@ -1,6 +1,7 @@
 /**
- * Comiket 108 Master Sheet - Google Apps Script Web App Backend
+ * Comiket Master Sheet - Google Apps Script Web App Backend
  * Receives circle tracking payloads and appends them to your Google Sheet matching your Master Sheet layout.
+ * Supports 3-Day Comiket Event Structure.
  */
 
 function doPost(e) {
@@ -8,13 +9,14 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
 
-    // Initialize headers if sheet is brand new
+    // Initialize headers if sheet is brand new (12 Columns)
     if (sheet.getLastRow() === 0) {
       sheet.appendRow([
         'Circle',
         'Product',
         'Day 1 Position',
         'Day 2 Position',
+        'Day 3 Position',
         'Priority',
         'Price (¥)',
         'Sample Image',
@@ -23,14 +25,14 @@ function doPost(e) {
         'Status',
         'Note'
       ]);
-      sheet.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
+      sheet.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
     }
 
     var imageFormula = data.imageUrl ? '=IMAGE("' + data.imageUrl + '")' : '';
     var tweetFormula = data.sourceUrl ? '=HYPERLINK("' + data.sourceUrl + '", "View Tweet")' : '';
     var shopFormula = data.shopUrl ? '=HYPERLINK("' + data.shopUrl + '", "Shop / Order")' : '';
 
-    var dayCode = data.dayCode || (data.day && data.day.includes('2') ? 'D2' : 'D1');
+    var dayCode = data.dayCode || (data.day && data.day.includes('3') ? 'D3' : (data.day && data.day.includes('2') ? 'D2' : 'D1'));
     var building = data.building || data.hall || '東123';
     var block = data.block || '';
     var space = data.spaceNum || data.space || '';
@@ -38,12 +40,14 @@ function doPost(e) {
 
     var day1Loc = data.day1Location || (dayCode === 'D1' ? fullLoc : '');
     var day2Loc = data.day2Location || (dayCode === 'D2' ? fullLoc : '');
+    var day3Loc = data.day3Location || (dayCode === 'D3' ? fullLoc : '');
 
     sheet.appendRow([
       data.circleName || 'Unknown Circle',
       data.description || data.product || '',
       day1Loc,
       day2Loc,
+      day3Loc,
       data.priority || 'P2 (Medium)',
       data.price ? Number(data.price) : '',
       imageFormula,

@@ -1,28 +1,28 @@
 /**
  * Comiket Circle Tracker Sync - Parser & Seasonal Timeline Utilities
  * Extracts Comiket circle metadata (Day, Hall, Block, Space, Price, Circle Name, Artist, Image URL, FixupX Link, etc.)
- * Calculates dynamic seasonal timeline & edition numbers (Summer/Winter Comiket).
+ * Calculates dynamic seasonal timeline & edition numbers (Summer/Winter Comiket with 3-Day support).
  */
 
 (function (global) {
-  // Primary Location Regex (With explicit building direction Kanji [東西南] or English [East|West|South|[EWS]])
-  const COMIKET_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|12\/30|12\/31|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)?\s*(?:([東西南])\s*([1-8１-８])?|\b(East|West|South|[EWS])\b\s*([1-8])?)\s*(?:ホール|Hall)?\s*([1-8１-８])?\s*[-ー―‐/]?\s*["'「『]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*["'」』]?\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
+  // Primary Location Regex (Supports Day 1, Day 2, Day 3, dates 8/14, 8/15, 8/16, 12/29, 12/30, 12/31)
+  const COMIKET_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|3日目|三日目|金曜日?|土曜日?|日曜日?|8\/14|8\/15|8\/16|12\/29|12\/30|12\/31|[金土日㈮㈯㈰]|Day\s*[123])(?:\)?)[^\w\s]*)?\s*(?:([東西南])\s*([1-8１-８])?|\b(East|West|South|[EWS])\b\s*([1-8])?)\s*(?:ホール|Hall)?\s*([1-8１-８])?\s*[-ー―‐/]?\s*["'「『]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*["'」』]?\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
 
-  const GLOBAL_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|12\/30|12\/31|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)?\s*(?:([東西南])\s*([1-8１-８])?|\b(East|West|South|[EWS])\b\s*([1-8])?)\s*(?:ホール|Hall)?\s*([1-8１-８])?\s*[-ー―‐/]?\s*["'「『]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*["'」』]?\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/gi;
+  const GLOBAL_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|3日目|三日目|金曜日?|土曜日?|日曜日?|8\/14|8\/15|8\/16|12\/29|12\/30|12\/31|[金土日㈮㈯㈰]|Day\s*[123])(?:\)?)[^\w\s]*)?\s*(?:([東西南])\s*([1-8１-８])?|\b(East|West|South|[EWS])\b\s*([1-8])?)\s*(?:ホール|Hall)?\s*([1-8１-８])?\s*[-ー―‐/]?\s*["'「『]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*["'」』]?\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/gi;
 
-  // Fallback Location Regex (Day + Block + Space Number without explicit building direction, e.g. 土曜日ス-20ab)
-  const DAY_BLOCK_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|土曜日?|日曜日?|8\/15|8\/16|12\/30|12\/31|[土日㈯㈰]|Day\s*[12])(?:\)?)[^\w\s]*)\s*[-ー―‐/]?\s*["'「『]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*["'」』]?\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
+  // Fallback Location Regex
+  const DAY_BLOCK_LOCATION_REGEX = /(?:(?:\(?)(1日目|一日目|2日目|二日目|3日目|三日目|金曜日?|土曜日?|日曜日?|8\/14|8\/15|8\/16|12\/29|12\/30|12\/31|[金土日㈮㈯㈰]|Day\s*[123])(?:\)?)[^\w\s]*)\s*[-ー―‐/]?\s*["'「『]?\s*([ぁ-んァ-ヶa-zA-Z]{1,2})\s*["'」』]?\s*[-ー―‐]?\s*([0-9０-９]{1,2})\s*([abａｂ]{1,2})?/i;
 
   const EXPLICIT_PRICE_REGEX = /(?:¥|￥|価格[:：]?\s*)([1-9][0-9]{2,4})|([1-9][0-9]{2,4})\s*(?:円|yen|Yen|YEN)/i;
 
   /**
-   * Returns current Comiket edition, season, and dates based on timeline rules:
-   * - Jan 1 to Aug 20: Summer Comiket (e.g., C108 in Aug 2026, C110 in Aug 2027)
-   * - Aug 21 to Dec 31: Winter Comiket (e.g., C109 in Dec 2026, C111 in Dec 2027)
+   * Returns current Comiket edition, season, and 3-day dates based on timeline rules:
+   * - Jan 1 to Aug 20: Summer Comiket (Aug 14, Aug 15, Aug 16)
+   * - Aug 21 to Dec 31: Winter Comiket (Dec 29, Dec 30, Dec 31)
    */
   function getCurrentComiketInfo(refDate = new Date()) {
     const year = refDate.getFullYear();
-    const month = refDate.getMonth() + 1; // 1-12
+    const month = refDate.getMonth() + 1;
     const day = refDate.getDate();
 
     const isSummer = (month < 8) || (month === 8 && day <= 20);
@@ -31,17 +31,20 @@
     let season;
     let day1Label;
     let day2Label;
+    let day3Label;
 
     if (isSummer) {
       season = 'Summer';
       editionNum = 108 + (year - 2026) * 2;
-      day1Label = 'Day 1 (Aug 15)';
-      day2Label = 'Day 2 (Aug 16)';
+      day1Label = 'Day 1 (Aug 14)';
+      day2Label = 'Day 2 (Aug 15)';
+      day3Label = 'Day 3 (Aug 16)';
     } else {
       season = 'Winter';
       editionNum = 109 + (year - 2026) * 2;
-      day1Label = 'Day 1 (Dec 30)';
-      day2Label = 'Day 2 (Dec 31)';
+      day1Label = 'Day 1 (Dec 29)';
+      day2Label = 'Day 2 (Dec 30)';
+      day3Label = 'Day 3 (Dec 31)';
     }
 
     const edition = `C${editionNum}`;
@@ -53,7 +56,8 @@
       year: year,
       title: `${edition} Plan`,
       day1Label: day1Label,
-      day2Label: day2Label
+      day2Label: day2Label,
+      day3Label: day3Label
     };
   }
 
@@ -95,7 +99,12 @@
   function formatDayCode(day) {
     if (!day) return 'D1';
     const str = String(day).toLowerCase();
-    if (str.includes('2') || str.includes('二') || str.includes('日') || str.includes('12/31') || str.includes('8/16')) return 'D2';
+    if (str.includes('3') || str.includes('三') || str.includes('12/31') || str.includes('8/16') || str.includes('day 3') || str.includes('day3')) {
+      return 'D3';
+    }
+    if (str.includes('2') || str.includes('二') || str.includes('12/30') || str.includes('8/15') || str.includes('day 2') || str.includes('day2')) {
+      return 'D2';
+    }
     return 'D1';
   }
 
@@ -161,7 +170,7 @@
     const fullSpace = `${spaceNum}${posSuffix}`;
 
     const dayCode = formatDayCode(dayRaw);
-    const day = dayCode === 'D2' ? 'Day 2' : 'Day 1';
+    const day = dayCode === 'D3' ? 'Day 3' : (dayCode === 'D2' ? 'Day 2' : 'Day 1');
     const fullLocation = `${dayCode} ${buildingGroup} ${block}-${fullSpace}`;
 
     let price = '';
@@ -210,6 +219,7 @@
       fullLocation,
       day1Location: dayCode === 'D1' ? fullLocation : '',
       day2Location: dayCode === 'D2' ? fullLocation : '',
+      day3Location: dayCode === 'D3' ? fullLocation : '',
       price,
       imageUrl: options.imageUrl || '',
       sourceUrl: options.sourceUrl || '',

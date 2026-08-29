@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const statD1 = document.getElementById('stat-d1');
   const statD2 = document.getElementById('stat-d2');
+  const statD3 = document.getElementById('stat-d3');
   const statYen = document.getElementById('stat-yen');
 
   const btnExportCSV = document.getElementById('btn-export-csv');
@@ -256,17 +257,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let d1Count = 0;
     let d2Count = 0;
+    let d3Count = 0;
     let totalYen = 0;
 
     items.forEach((it) => {
       if (it.day === 'Day 1' || it.dayCode === 'D1') d1Count++;
       if (it.day === 'Day 2' || it.dayCode === 'D2') d2Count++;
+      if (it.day === 'Day 3' || it.dayCode === 'D3') d3Count++;
       if (it.price) totalYen += Number(it.price);
     });
 
-    statD1.textContent = d1Count;
-    statD2.textContent = d2Count;
-    statYen.textContent = `¥${totalYen.toLocaleString()}`;
+    if (statD1) statD1.textContent = d1Count;
+    if (statD2) statD2.textContent = d2Count;
+    if (statD3) statD3.textContent = d3Count;
+    if (statYen) statYen.textContent = `¥${totalYen.toLocaleString()}`;
   }
 
   // 5. Google Sheet Import Modal Logic

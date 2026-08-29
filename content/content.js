@@ -1,6 +1,6 @@
 /**
  * Comiket Circle Tracker Sync - Content Script for X (Twitter)
- * Scans tweet cards, author display names, images, and post detail views with real-time duplication tracking & multi-day consolidation.
+ * Scans tweet cards, author display names, images, and post detail views with real-time duplication tracking & 3-Day Comiket multi-day consolidation.
  * Supports Master Extension Enable/Disable toggle control.
  */
 
@@ -10,7 +10,7 @@
   if (window.__comiketTrackerInjected) return;
   window.__comiketTrackerInjected = true;
 
-  console.log('[Comiket Tracker] Content script active with multi-day target consolidation.');
+  console.log('[Comiket Tracker] Content script active with 3-Day multi-day target consolidation.');
 
   let savedItemsList = [];
   let extensionEnabled = true;
@@ -98,7 +98,9 @@
     const targetArtist = normalizeStr(targetItem.artist || targetItem.circleName);
     const targetD1 = normalizeStr(targetItem.day1Location);
     const targetD2 = normalizeStr(targetItem.day2Location);
-    const targetDay = targetItem.dayCode || (targetItem.day && targetItem.day.includes('2') ? 'D2' : 'D1');
+    const targetD3 = normalizeStr(targetItem.day3Location);
+
+    const targetDay = targetItem.dayCode || (targetItem.day && targetItem.day.includes('3') ? 'D3' : (targetItem.day && targetItem.day.includes('2') ? 'D2' : 'D1'));
     const targetLoc = normalizeStr(targetItem.fullLocation || targetItem.space);
 
     for (const savedItem of savedItemsList) {
@@ -110,13 +112,14 @@
 
       const savedD1 = normalizeStr(savedItem.day1Location);
       const savedD2 = normalizeStr(savedItem.day2Location);
+      const savedD3 = normalizeStr(savedItem.day3Location);
 
-      if (targetD1 && targetD2 && savedD1 && savedD2) {
-        if (savedD1 === targetD1 && savedD2 === targetD2) {
+      if (targetD1 && targetD2 && targetD3 && savedD1 && savedD2 && savedD3) {
+        if (savedD1 === targetD1 && savedD2 === targetD2 && savedD3 === targetD3) {
           return savedItem;
         }
       } else {
-        const savedDay = savedItem.dayCode || (savedItem.day && savedItem.day.includes('2') ? 'D2' : 'D1');
+        const savedDay = savedItem.dayCode || (savedItem.day && savedItem.day.includes('3') ? 'D3' : (savedItem.day && savedItem.day.includes('2') ? 'D2' : 'D1'));
         const savedLoc = normalizeStr(savedItem.fullLocation || savedItem.space);
 
         if (savedDay === targetDay && savedLoc === targetLoc) {
@@ -173,7 +176,6 @@
       selectedPriority = settings.defaultPriority;
     }
 
-    // Always guarantee description resolution (saved custom description -> raw post description -> full tweet text)
     let displayDescription = '';
     if (trackedItem && trackedItem.description && trackedItem.description.trim()) {
       displayDescription = trackedItem.description;
@@ -224,6 +226,13 @@
               <input type="text" class="comiket-input" id="cmt-day2-loc" value="${escapeHtml(parsedData.day2Location || (parsedData.dayCode === 'D2' ? parsedData.fullLocation : ''))}" placeholder="D2 西12 あ-45ab (Optional)">
             </div>
             <div class="comiket-field-group">
+              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Day 3 Position', '3日目 配置'))}</label>
+              <input type="text" class="comiket-input" id="cmt-day3-loc" value="${escapeHtml(parsedData.day3Location || (parsedData.dayCode === 'D3' ? parsedData.fullLocation : ''))}" placeholder="D3 南12 さ-99b (Optional)">
+            </div>
+          </div>
+
+          <div class="comiket-field-row">
+            <div class="comiket-field-group">
               <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Priority', '優先度'))}</label>
               <select class="comiket-select" id="cmt-priority">
                 <option value="P0 (Top)" ${selectedPriority.includes('P0') ? 'selected' : ''}>${escapeHtml(extAPI.getBilingualText('P0 (Top / Wall Circle)', 'P0 (壁超最優先 / 大壁)'))}</option>
@@ -232,33 +241,32 @@
                 <option value="P3 (Low)" ${selectedPriority.includes('P3') ? 'selected' : ''}>${escapeHtml(extAPI.getBilingualText('P3 (Low / Backup)', 'P3 (予備 / 後回し)'))}</option>
               </select>
             </div>
-          </div>
-
-          <div class="comiket-field-row">
             <div class="comiket-field-group">
               <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Circle Name', 'サークル名'))}</label>
               <input type="text" class="comiket-input" id="cmt-circle" value="${escapeHtml(parsedData.circleName || '')}">
             </div>
+          </div>
+
+          <div class="comiket-field-row">
             <div class="comiket-field-group">
               <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Artist / Handle', '作者名 / アカウント'))}</label>
               <input type="text" class="comiket-input" id="cmt-artist" value="${escapeHtml(parsedData.artist || '')}">
+            </div>
+            <div class="comiket-field-group">
+              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Est. Price (JPY)', '頒布価格 (円)'))}</label>
+              <input type="number" class="comiket-input" id="cmt-price" value="${parsedData.price || ''}">
             </div>
           </div>
 
           <div class="comiket-field-row">
             <div class="comiket-field-group">
-              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Est. Price (JPY)', '頒布価格 (円)'))}</label>
-              <input type="number" class="comiket-input" id="cmt-price" value="${parsedData.price || ''}">
-            </div>
-            <div class="comiket-field-group">
               <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Sample Image URL', 'サンプル画像 URL'))}</label>
               <input type="url" class="comiket-input" id="cmt-img-url" value="${escapeHtml(parsedData.imageUrl || '')}" placeholder="https://pbs.twimg.com/media/...">
             </div>
-          </div>
-
-          <div class="comiket-field-group">
-            <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Tweet Link / Status URL', 'ツイート / ポスト URL'))}</label>
-            <input type="url" class="comiket-input" id="cmt-source-url" value="${escapeHtml(parsedData.sourceUrl || window.location.href)}">
+            <div class="comiket-field-group">
+              <label class="comiket-field-label">${escapeHtml(extAPI.getBilingualText('Tweet Link / Status URL', 'ツイート / ポスト URL'))}</label>
+              <input type="url" class="comiket-input" id="cmt-source-url" value="${escapeHtml(parsedData.sourceUrl || window.location.href)}">
+            </div>
           </div>
 
           <div class="comiket-field-group">
@@ -300,6 +308,7 @@
 
       const d1Val = backdrop.querySelector('#cmt-day1-loc').value.trim();
       const d2Val = backdrop.querySelector('#cmt-day2-loc').value.trim();
+      const d3Val = backdrop.querySelector('#cmt-day3-loc').value.trim();
       const priorityVal = backdrop.querySelector('#cmt-priority').value;
       const circleVal = backdrop.querySelector('#cmt-circle').value.trim();
       const artistVal = backdrop.querySelector('#cmt-artist').value.trim();
@@ -309,11 +318,14 @@
       const fixupVal = backdrop.querySelector('#cmt-fixup-url').value.trim();
       const descVal = backdrop.querySelector('#cmt-desc').value.trim();
 
+      const locs = [d1Val, d2Val, d3Val].filter(Boolean);
+
       const updatedPayload = {
         ...parsedData,
         day1Location: d1Val,
         day2Location: d2Val,
-        fullLocation: (d1Val && d2Val) ? `${d1Val} / ${d2Val}` : (d1Val || d2Val || parsedData.fullLocation),
+        day3Location: d3Val,
+        fullLocation: locs.length > 0 ? locs.join(' / ') : parsedData.fullLocation,
         priority: priorityVal,
         circleName: circleVal || parsedData.circleName,
         artist: artistVal || parsedData.artist,
